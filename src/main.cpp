@@ -1,9 +1,10 @@
+#include "RHI/vulkan_rhi.h"
 #include <iostream>
 
 using namespace std;
 
 int main(int argc, char** argv)
 {
-    cout << "hello world!" << endl;
-    return 0;
+    Sparrow::VulkanRHI rhi;
+    rhi.initialize();
 }
