@@ -19,11 +19,11 @@ namespace Sparrow {
         createSurface();
         pickPhysicalDevice();
         createLogicalDevice();
+        createCommandPool();
+        createCommandBuffers();
         createSwapChain();
         createImageView();
-        createGraphicPipeline();
-        createRenderPass();
-        present();
+        createFramebuffer();
     }
 
     VulkanRHI::~VulkanRHI() {
@@ -163,27 +163,56 @@ namespace Sparrow {
         surfaceCapabilities = gpu.getSurfaceCapabilitiesKHR(surface);
     }
 
-    void VulkanRHI::createSwapChain() {
+    void VulkanRHI::createCommandPool() {
 
+    }
+
+    void VulkanRHI::createCommandBuffers() {
+
+    }
+
+    void VulkanRHI::createSwapChain() {
+        format = surfaceFormats[0].format;
+        frameCount = surfaceCapabilities.minImageCount;
+        auto swapchainInfo =
+                vk::SwapchainCreateInfoKHR()
+                        .setSurface(surface)
+                        .setImageFormat(format)
+                        .setMinImageCount(frameCount)
+                        .setImageExtent(vk::Extent2D(width, height))
+                        .setPresentMode(vk::PresentModeKHR::eFifo)
+                        .setImageSharingMode(vk::SharingMode::eExclusive)
+                        .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
+                        .setImageColorSpace(surfaceFormats[0].colorSpace)
+                        .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+                        .setImageArrayLayers(1)
+                        .setClipped(true);
+        swapchain = device.createSwapchainKHR(swapchainInfo);
     }
 
     void VulkanRHI::createImageView() {
+        swapchainImages = device.getSwapchainImagesKHR(swapchain);
+        frameCount = swapchainImages.size();
 
-    }
-
-    void VulkanRHI::createRenderPass() {
-
-    }
-
-    void VulkanRHI::createGraphicPipeline() {
-
+        swapchainIamgesViews.resize(frameCount);
+        for (uint32_t i = 0; i < frameCount; i++) {
+            auto createImageViewInfo =
+                    vk::ImageViewCreateInfo()
+                            .setViewType(vk::ImageViewType::e2D)
+                            .setSubresourceRange(vk::ImageSubresourceRange(
+                                    vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1))
+                            .setFormat(format)
+                            .setImage(swapchainImages[i])
+                            .setComponents(
+                                    vk::ComponentMapping(vk::ComponentSwizzle::eIdentity,
+                                                         vk::ComponentSwizzle::eIdentity,
+                                                         vk::ComponentSwizzle::eIdentity,
+                                                         vk::ComponentSwizzle::eIdentity));
+            swapchainIamgesViews[i] = device.createImageView(createImageViewInfo);
+        }
     }
 
     void VulkanRHI::createFramebuffer() {
-
-    }
-
-    void VulkanRHI::present() {
 
     }
 
@@ -219,6 +248,7 @@ namespace Sparrow {
         }
         return VK_FALSE;
     }
+
 
 
 };

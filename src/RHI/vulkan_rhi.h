@@ -2,11 +2,17 @@
 #define SPARROWENGINE_VULKAN_RHI_H
 
 #include "rhi.h"
+
 #define VK_USE_PLATFORM_WIN32_KHR
+
 #include <vulkan/vulkan.hpp>
+
 #define GLFW_INCLUDE_VULKAN
+
 #include <GLFW/glfw3.h>
+
 #define GLFW_EXPOSE_NATIVE_WIN32
+
 #include <GLFW/glfw3native.h>
 
 namespace Sparrow {
@@ -29,17 +35,15 @@ namespace Sparrow {
 
         void createLogicalDevice();
 
+        void createCommandPool();
+
+        void createCommandBuffers();
+
         void createSwapChain();
 
         void createImageView();
 
-        void createRenderPass();
-
-        void createGraphicPipeline();
-
         void createFramebuffer();
-
-        void present();
 
     private:
         static bool checkValidationLayerSupport(const std::vector<const char *> &layerNames);
@@ -65,13 +69,21 @@ namespace Sparrow {
         std::vector<vk::QueueFamilyProperties> queueFamilyProps;
         uint32_t graphicIndex;
 
-        // surface
+        //Surface
         vk::SurfaceKHR surface;
         std::vector<vk::PresentModeKHR> presentModes;
         std::vector<vk::SurfaceFormatKHR> surfaceFormats;
         vk::SurfaceCapabilitiesKHR surfaceCapabilities;
         HWND hwnd;
         HINSTANCE hInstance;
+
+        //Swapchain
+        vk::Format format;
+        vk::SwapchainKHR swapchain;
+        std::vector<vk::Image> swapchainImages;
+        std::vector<vk::ImageView> swapchainIamgesViews;
+        uint32_t currentImage = 0;
+        uint32_t frameCount = 0;
 
         //GLFW
         static constexpr unsigned WIDTH = 800;
