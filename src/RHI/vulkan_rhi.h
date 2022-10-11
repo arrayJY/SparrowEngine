@@ -14,6 +14,7 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 
 #include <GLFW/glfw3native.h>
+#include <optional>
 
 namespace Sparrow {
     class VulkanRHI : public RHI {
@@ -46,6 +47,16 @@ namespace Sparrow {
         void createFramebuffer();
 
     private:
+        struct QueueFamilyIndices {
+            std::optional<uint32_t> graphicsFamily;
+
+            bool isComplete() const {
+                return graphicsFamily.has_value();
+            }
+        };
+
+
+    private:
         static bool checkValidationLayerSupport(const std::vector<const char *> &layerNames);
 
         static VKAPI_ATTR vk::Bool32 VKAPI_CALL
@@ -53,6 +64,8 @@ namespace Sparrow {
                       vk::DebugUtilsMessageTypeFlagsEXT messageType,
                       const vk::DebugUtilsMessengerCallbackDataEXT *pCallbackData,
                       void *pUserData);
+
+        VulkanRHI::QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice physicalDevice);
 
     private:
         //Instance
@@ -66,8 +79,11 @@ namespace Sparrow {
         std::vector<vk::PhysicalDevice> physicalDevices;
         std::vector<const char *> deviceExtensions;
         vk::Queue graphicQueue;
-        std::vector<vk::QueueFamilyProperties> queueFamilyProps;
-        uint32_t graphicIndex;
+        QueueFamilyIndices queueFamilyIndices;
+
+        //Command pool and command buffers
+        vk::CommandPool commandPool;
+        std::vector<vk::CommandBuffer> commandBuffers;
 
         //Surface
         vk::SurfaceKHR surface;

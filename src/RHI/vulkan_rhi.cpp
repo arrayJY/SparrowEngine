@@ -95,7 +95,7 @@ namespace Sparrow {
                                                   &debugMessenger,
                                                   dispatch) != vk::Result::eSuccess) {
             throw std::runtime_error("Create debug util messenger Failed");
-        };
+        }
     }
 
     void VulkanRHI::createSurface() {
@@ -114,23 +114,11 @@ namespace Sparrow {
     }
 
     void VulkanRHI::createLogicalDevice() {
-        queueFamilyProps = gpu.getQueueFamilyProperties();
-
-        const auto supports =
-                std::views::iota((std::size_t) 0, queueFamilyProps.size()) |
-                std::views::transform([this](auto i) {
-                    auto support = gpu.getSurfaceSupportKHR(i, surface);
-                    return support == VK_TRUE &&
-                           queueFamilyProps[i].queueFlags & vk::QueueFlagBits::eGraphics;
-                });
-        const auto graphicProp = std::find(supports.begin(), supports.end(), true);
-        bool found = graphicProp != supports.end();
-        if (!found) {
-            throw std::runtime_error("No found surface support queue.");
+        queueFamilyIndices = findQueueFamilies(gpu);
+        auto graphicIndex = queueFamilyIndices.graphicsFamily.value();
+        if (!queueFamilyIndices.isComplete()) {
+            throw std::runtime_error("Find queue families failed.");
         }
-        graphicIndex =
-                static_cast<uint32_t>(std::distance(supports.begin(), graphicProp));
-
         auto feature = vk::PhysicalDeviceFeatures().setGeometryShader(VK_TRUE);
 
         float priorities[] = {0.0f};
@@ -164,11 +152,18 @@ namespace Sparrow {
     }
 
     void VulkanRHI::createCommandPool() {
-
+        auto commandPoolInfo = vk::CommandPoolCreateInfo()
+                .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
+                .setQueueFamilyIndex(queueFamilyIndices.graphicsFamily.value());
+        commandPool = device.createCommandPool(commandPoolInfo);
     }
 
     void VulkanRHI::createCommandBuffers() {
-
+        auto allocInfo = vk::CommandBufferAllocateInfo()
+                .setCommandPool(commandPool)
+                .setLevel(vk::CommandBufferLevel::ePrimary)
+                .setCommandBufferCount(1);
+        commandBuffers = device.allocateCommandBuffers(allocInfo);
     }
 
     void VulkanRHI::createSwapChain() {
@@ -249,6 +244,18 @@ namespace Sparrow {
         return VK_FALSE;
     }
 
+    VulkanRHI::QueueFamilyIndices VulkanRHI::findQueueFamilies(vk::PhysicalDevice physicalDevice) {
+        auto queueFamilyProp = physicalDevice.getQueueFamilyProperties();
 
+        for (auto i = 0; i < queueFamilyProp.size(); i++) {
+            auto support = physicalDevice.getSurfaceSupportKHR(i, surface);
+            if (support == VK_TRUE && queueFamilyProp[i].queueFlags & vk::QueueFlagBits::eGraphics) {
+                queueFamilyIndices.graphicsFamily = i;
+                break;
+            }
+        }
 
-};
+        return queueFamilyIndices;
+    }
+
+}
