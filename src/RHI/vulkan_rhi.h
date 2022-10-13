@@ -50,9 +50,15 @@ namespace Sparrow {
         struct QueueFamilyIndices {
             std::optional<uint32_t> graphicsFamily;
 
-            bool isComplete() const {
+            [[nodiscard]]bool isComplete() const {
                 return graphicsFamily.has_value();
             }
+        };
+
+        struct SwapChainSupportDetails {
+            vk::SurfaceCapabilitiesKHR capabilities;
+            std::vector<vk::SurfaceFormatKHR> formats;
+            std::vector<vk::PresentModeKHR> presentModes;
         };
 
 
@@ -66,6 +72,14 @@ namespace Sparrow {
                       void *pUserData);
 
         VulkanRHI::QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice physicalDevice);
+
+        static SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device);
+
+        static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR> &availableFormats);
+
+        static vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> &availablePresentModes);
+
+        vk::Extent2D chooseSwapExtend(const vk::SurfaceCapabilitiesKHR &capabilities);
 
     private:
         //Instance
@@ -90,6 +104,8 @@ namespace Sparrow {
         std::vector<vk::PresentModeKHR> presentModes;
         std::vector<vk::SurfaceFormatKHR> surfaceFormats;
         vk::SurfaceCapabilitiesKHR surfaceCapabilities;
+        vk::PresentModeKHR presentMode;
+        vk::Extent2D extent;
         HWND hwnd;
         HINSTANCE hInstance;
 
@@ -97,9 +113,13 @@ namespace Sparrow {
         vk::Format format;
         vk::SwapchainKHR swapchain;
         std::vector<vk::Image> swapchainImages;
-        std::vector<vk::ImageView> swapchainIamgesViews;
+        std::vector<vk::ImageView> swapchainImagesViews;
+        vk::Extent2D swapchainExtent;
         uint32_t currentImage = 0;
         uint32_t frameCount = 0;
+
+        //Framebuffer
+        std::vector<vk::Framebuffer> framebuffers;
 
         //GLFW
         static constexpr unsigned WIDTH = 800;

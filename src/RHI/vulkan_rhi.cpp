@@ -1,9 +1,13 @@
+#define NOMINMAX
+
 #include "vulkan_rhi.h"
 #include <algorithm>
 #include <iostream>
 #include <vector>
 #include <format>
 #include <ranges>
+#include <array>
+#include <limits>
 
 namespace Sparrow {
 #ifdef NDEBUG
@@ -167,8 +171,6 @@ namespace Sparrow {
     }
 
     void VulkanRHI::createSwapChain() {
-        format = surfaceFormats[0].format;
-        frameCount = surfaceCapabilities.minImageCount;
         auto swapchainInfo =
                 vk::SwapchainCreateInfoKHR()
                         .setSurface(surface)
@@ -189,7 +191,7 @@ namespace Sparrow {
         swapchainImages = device.getSwapchainImagesKHR(swapchain);
         frameCount = swapchainImages.size();
 
-        swapchainIamgesViews.resize(frameCount);
+        swapchainImagesViews.resize(frameCount);
         for (uint32_t i = 0; i < frameCount; i++) {
             auto createImageViewInfo =
                     vk::ImageViewCreateInfo()
@@ -203,7 +205,7 @@ namespace Sparrow {
                                                          vk::ComponentSwizzle::eIdentity,
                                                          vk::ComponentSwizzle::eIdentity,
                                                          vk::ComponentSwizzle::eIdentity));
-            swapchainIamgesViews[i] = device.createImageView(createImageViewInfo);
+            swapchainImagesViews[i] = device.createImageView(createImageViewInfo);
         }
     }
 
@@ -257,5 +259,45 @@ namespace Sparrow {
 
         return queueFamilyIndices;
     }
+
+    VulkanRHI::SwapChainSupportDetails VulkanRHI::querySwapChainSupport(vk::PhysicalDevice device) {
+
+        return VulkanRHI::SwapChainSupportDetails();
+    }
+
+    vk::SurfaceFormatKHR VulkanRHI::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR> &availableFormats) {
+        for (const auto &availableFormat: availableFormats) {
+            if (availableFormat.format == vk::Format::eB8G8R8A8Srgb &&
+                availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
+                return availableFormat;
+            }
+        }
+        return availableFormats[0];
+    }
+
+    vk::PresentModeKHR VulkanRHI::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> &availablePresentModes) {
+        for (const auto &availablePresentMode: availablePresentModes) {
+            if (availablePresentMode == vk::PresentModeKHR::eMailbox) {
+                return availablePresentMode;
+            }
+        }
+        return vk::PresentModeKHR::eFifo;
+    }
+
+    vk::Extent2D VulkanRHI::chooseSwapExtend(const vk::SurfaceCapabilitiesKHR &capabilities) {
+        if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+            return capabilities.currentExtent;
+        } else {
+            int w, h;
+            glfwGetFramebufferSize(window, &w, &h);
+            auto actualExtent = vk::Extent2D().setWidth(w).setHeight(h);
+            actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width,
+                                            capabilities.maxImageExtent.width);
+            actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height,
+                                             capabilities.maxImageExtent.height);
+            return actualExtent;
+        }
+    }
+
 
 }
