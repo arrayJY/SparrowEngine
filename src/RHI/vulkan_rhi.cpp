@@ -1,6 +1,7 @@
 #define NOMINMAX
 
 #include "vulkan_rhi.h"
+#include "vulkan_utils.h"
 #include <algorithm>
 #include <iostream>
 #include <vector>
@@ -8,6 +9,7 @@
 #include <ranges>
 #include <array>
 #include <limits>
+#include <set>
 
 namespace Sparrow {
 #ifdef NDEBUG
@@ -26,8 +28,8 @@ namespace Sparrow {
         createCommandPool();
         createCommandBuffers();
         createSwapChain();
-        createImageView();
-        createFramebuffer();
+        createSwapChainImageView();
+        createFramebufferImageAndView();
     }
 
     VulkanRHI::~VulkanRHI() {
@@ -119,40 +121,32 @@ namespace Sparrow {
 
     void VulkanRHI::createLogicalDevice() {
         queueFamilyIndices = findQueueFamilies(gpu);
-        auto graphicIndex = queueFamilyIndices.graphicsFamily.value();
         if (!queueFamilyIndices.isComplete()) {
             throw std::runtime_error("Find queue families failed.");
         }
+        auto graphicIndex = queueFamilyIndices.graphicsFamily.value();
         auto feature = vk::PhysicalDeviceFeatures().setGeometryShader(VK_TRUE);
-
-        float priorities[] = {0.0f};
         deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-        auto deviceQueueInfo = vk::DeviceQueueCreateInfo()
-                .setQueueCount(1)
-                .setPQueuePriorities(priorities)
-                .setQueueFamilyIndex(graphicIndex);
+        std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
+        std::set<uint32_t> uniqueQueueFamilies = {queueFamilyIndices.graphicsFamily.value(),
+                                                  queueFamilyIndices.presentFamily.value()};
+        float priorities = 1.0f;
+        for (auto queueFamilyIndex: uniqueQueueFamilies) {
+            auto deviceQueueInfo = vk::DeviceQueueCreateInfo()
+                    .setQueueCount(1)
+                    .setPQueuePriorities(&priorities)
+                    .setQueueFamilyIndex(queueFamilyIndex);
+            queueCreateInfos.push_back(deviceQueueInfo);
+        }
 
         auto deviceInfo = vk::DeviceCreateInfo()
-                .setQueueCreateInfoCount(1)
-                .setPQueueCreateInfos(&deviceQueueInfo)
+                .setQueueCreateInfos(queueCreateInfos)
                 .setPEnabledExtensionNames(deviceExtensions)
                 .setPEnabledFeatures(&feature);
 
         device = gpu.createDevice(deviceInfo);
-        graphicQueue = device.getQueue(graphicIndex, 0);
-
-        surfaceFormats = gpu.getSurfaceFormatsKHR(surface);
-        if (surfaceFormats.empty()) {
-            throw std::runtime_error("Get surface formats khr error");
-        }
-
-        presentModes = gpu.getSurfacePresentModesKHR(surface);
-        if (presentModes.empty()) {
-            throw std::runtime_error("Get present modes khr error");
-        }
-
-        surfaceCapabilities = gpu.getSurfaceCapabilitiesKHR(surface);
+        presentQueue = device.getQueue(queueFamilyIndices.presentFamily.value(), 0);
     }
 
     void VulkanRHI::createCommandPool() {
@@ -171,46 +165,76 @@ namespace Sparrow {
     }
 
     void VulkanRHI::createSwapChain() {
-        auto swapchainInfo =
+        auto swapChainSupport = querySwapChainSupport(gpu);
+        auto &capabilities = swapChainSupport.capabilities;
+
+        auto presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+        swapChainImageFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+        swapChainExtent = chooseSwapExtent(capabilities);
+
+        auto imageCount = capabilities.minImageCount + 1;
+        if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) {
+            imageCount = capabilities.maxImageCount;
+        }
+
+        auto &indices = queueFamilyIndices;
+        auto graphicsIsSameAsPresent = indices.graphicsFamily == indices.presentFamily;
+
+        uint32_t queueIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+        auto imageSharingMode = graphicsIsSameAsPresent ? vk::SharingMode::eConcurrent : vk::SharingMode::eExclusive;
+        auto queueFamilyIndexCount = graphicsIsSameAsPresent ? 2 : 0;
+        auto pQueueIndices = graphicsIsSameAsPresent ? queueIndices : nullptr;
+
+        auto swapChainInfo =
                 vk::SwapchainCreateInfoKHR()
                         .setSurface(surface)
                         .setImageFormat(format)
-                        .setMinImageCount(frameCount)
-                        .setImageExtent(vk::Extent2D(width, height))
-                        .setPresentMode(vk::PresentModeKHR::eFifo)
-                        .setImageSharingMode(vk::SharingMode::eExclusive)
-                        .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
-                        .setImageColorSpace(surfaceFormats[0].colorSpace)
-                        .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+                        .setMinImageCount(imageCount)
+                        .setImageColorSpace(swapChainImageFormat.colorSpace)
+                        .setImageExtent(swapChainExtent)
                         .setImageArrayLayers(1)
+                        .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+                        .setImageSharingMode(imageSharingMode)
+                        .setQueueFamilyIndexCount(queueFamilyIndexCount)
+                        .setPQueueFamilyIndices(pQueueIndices)
+                        .setPreTransform(swapChainSupport.capabilities.currentTransform)
+                        .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
+                        .setPresentMode(presentMode)
                         .setClipped(true);
-        swapchain = device.createSwapchainKHR(swapchainInfo);
+        swapChain = device.createSwapchainKHR(swapChainInfo);
     }
 
-    void VulkanRHI::createImageView() {
-        swapchainImages = device.getSwapchainImagesKHR(swapchain);
-        frameCount = swapchainImages.size();
+    void VulkanRHI::createSwapChainImageView() {
+        swapChainImages = device.getSwapchainImagesKHR(swapChain);
+        auto frameCount = swapChainImages.size();
 
-        swapchainImagesViews.resize(frameCount);
+        swapChainImagesViews.resize(frameCount);
         for (uint32_t i = 0; i < frameCount; i++) {
             auto createImageViewInfo =
                     vk::ImageViewCreateInfo()
+                            .setImage(swapChainImages[i])
                             .setViewType(vk::ImageViewType::e2D)
-                            .setSubresourceRange(vk::ImageSubresourceRange(
-                                    vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1))
                             .setFormat(format)
-                            .setImage(swapchainImages[i])
                             .setComponents(
                                     vk::ComponentMapping(vk::ComponentSwizzle::eIdentity,
                                                          vk::ComponentSwizzle::eIdentity,
                                                          vk::ComponentSwizzle::eIdentity,
-                                                         vk::ComponentSwizzle::eIdentity));
-            swapchainImagesViews[i] = device.createImageView(createImageViewInfo);
+                                                         vk::ComponentSwizzle::eIdentity))
+                            .setSubresourceRange(vk::ImageSubresourceRange(
+                                    vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+            swapChainImagesViews[i] = device.createImageView(createImageViewInfo);
         }
     }
 
-    void VulkanRHI::createFramebuffer() {
-
+    void VulkanRHI::createFramebufferImageAndView() {
+        VulkanUtils::createImage(gpu, device, swapChainExtent.width, swapChainExtent.height, format,
+                                 vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eInputAttachment |
+                                                            vk::ImageUsageFlagBits::eDepthStencilAttachment |
+                                                            vk::ImageUsageFlagBits::eTransferSrc,
+                                 vk::MemoryPropertyFlagBits::eDeviceLocal, std::nullopt, 1, 1, depthImage,
+                                 depthDeviceMemory);
+        depthImageView = VulkanUtils::createImageView(device, depthImage, format, vk::ImageAspectFlagBits::eDepth,
+                                                      vk::ImageViewType::e2D, 1, 1);
     }
 
     bool VulkanRHI::checkValidationLayerSupport(const std::vector<const char *> &layerNames) {
@@ -251,9 +275,11 @@ namespace Sparrow {
 
         for (auto i = 0; i < queueFamilyProp.size(); i++) {
             auto support = physicalDevice.getSurfaceSupportKHR(i, surface);
-            if (support == VK_TRUE && queueFamilyProp[i].queueFlags & vk::QueueFlagBits::eGraphics) {
+            if (queueFamilyProp[i].queueFlags & vk::QueueFlagBits::eGraphics) {
                 queueFamilyIndices.graphicsFamily = i;
-                break;
+            }
+            if (support) {
+                queueFamilyIndices.presentFamily = i;
             }
         }
 
@@ -261,8 +287,11 @@ namespace Sparrow {
     }
 
     VulkanRHI::SwapChainSupportDetails VulkanRHI::querySwapChainSupport(vk::PhysicalDevice device) {
-
-        return VulkanRHI::SwapChainSupportDetails();
+        return SwapChainSupportDetails{
+                .capabilities = device.getSurfaceCapabilitiesKHR(surface),
+                .formats = device.getSurfaceFormatsKHR(surface),
+                .presentModes = device.getSurfacePresentModesKHR(surface),
+        };
     }
 
     vk::SurfaceFormatKHR VulkanRHI::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR> &availableFormats) {
@@ -284,7 +313,7 @@ namespace Sparrow {
         return vk::PresentModeKHR::eFifo;
     }
 
-    vk::Extent2D VulkanRHI::chooseSwapExtend(const vk::SurfaceCapabilitiesKHR &capabilities) {
+    vk::Extent2D VulkanRHI::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR &capabilities) {
         if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
             return capabilities.currentExtent;
         } else {

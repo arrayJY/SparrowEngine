@@ -42,16 +42,17 @@ namespace Sparrow {
 
         void createSwapChain();
 
-        void createImageView();
+        void createSwapChainImageView();
 
-        void createFramebuffer();
+        void createFramebufferImageAndView();
 
     private:
         struct QueueFamilyIndices {
             std::optional<uint32_t> graphicsFamily;
+            std::optional<uint32_t> presentFamily;
 
             [[nodiscard]]bool isComplete() const {
-                return graphicsFamily.has_value();
+                return graphicsFamily.has_value() && presentFamily.has_value();
             }
         };
 
@@ -73,13 +74,13 @@ namespace Sparrow {
 
         VulkanRHI::QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice physicalDevice);
 
-        static SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device);
+        SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device);
 
         static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR> &availableFormats);
 
         static vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> &availablePresentModes);
 
-        vk::Extent2D chooseSwapExtend(const vk::SurfaceCapabilitiesKHR &capabilities);
+        vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR &capabilities);
 
     private:
         //Instance
@@ -92,7 +93,7 @@ namespace Sparrow {
         vk::Device device;
         std::vector<vk::PhysicalDevice> physicalDevices;
         std::vector<const char *> deviceExtensions;
-        vk::Queue graphicQueue;
+        vk::Queue presentQueue;
         QueueFamilyIndices queueFamilyIndices;
 
         //Command pool and command buffers
@@ -101,25 +102,27 @@ namespace Sparrow {
 
         //Surface
         vk::SurfaceKHR surface;
-        std::vector<vk::PresentModeKHR> presentModes;
-        std::vector<vk::SurfaceFormatKHR> surfaceFormats;
-        vk::SurfaceCapabilitiesKHR surfaceCapabilities;
         vk::PresentModeKHR presentMode;
-        vk::Extent2D extent;
         HWND hwnd;
         HINSTANCE hInstance;
 
         //Swapchain
         vk::Format format;
-        vk::SwapchainKHR swapchain;
-        std::vector<vk::Image> swapchainImages;
-        std::vector<vk::ImageView> swapchainImagesViews;
-        vk::Extent2D swapchainExtent;
+        vk::SwapchainKHR swapChain;
+        std::vector<vk::Image> swapChainImages;
+        vk::SurfaceFormatKHR swapChainImageFormat;
+        vk::Extent2D swapChainExtent;
+        std::vector<vk::ImageView> swapChainImagesViews;
         uint32_t currentImage = 0;
-        uint32_t frameCount = 0;
 
         //Framebuffer
         std::vector<vk::Framebuffer> framebuffers;
+
+        // Depth image
+        vk::Image depthImage;
+        vk::ImageView depthImageView;
+        vk::DeviceMemory depthDeviceMemory;
+
 
         //GLFW
         static constexpr unsigned WIDTH = 800;
