@@ -29,6 +29,7 @@ void VulkanRHI::initialize() {
   createLogicalDevice();
   createCommandPool();
   createCommandBuffers();
+  createSyncPrimitives();
   createSwapChain();
   createSwapChainImageView();
   createFramebufferImageAndView();
@@ -166,15 +167,28 @@ void VulkanRHI::createCommandBuffers() {
   commandBuffers = device.allocateCommandBuffers(allocInfo);
 }
 
+void VulkanRHI::createSyncPrimitives() {
+  auto semaphoreInfo = vk::SemaphoreCreateInfo();
+  auto fenceInfo =
+      vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled);
+  for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    imageAvailableForRenderSemaphores[i] =
+        device.createSemaphore(semaphoreInfo);
+    imageFinishedForPresentationSemaphores[i] =
+        device.createSemaphore(semaphoreInfo);
+    isFrameInFlightFences[i] = device.createFence(fenceInfo);
+  }
+}
+
 void VulkanRHI::createSwapChain() {
   auto swapChainSupport = querySwapChainSupport(gpu);
   auto& capabilities = swapChainSupport.capabilities;
 
-  auto presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+  presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
   swapChainImageFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
   swapChainExtent = chooseSwapExtent(capabilities);
 
-  auto imageCount = capabilities.minImageCount + 1;
+  uint32_t imageCount = capabilities.minImageCount + 1;
   if (capabilities.maxImageCount > 0 &&
       imageCount > capabilities.maxImageCount) {
     imageCount = capabilities.maxImageCount;
@@ -292,10 +306,11 @@ VulkanRHI::QueueFamilyIndices VulkanRHI::findQueueFamilies(
 
   for (auto i = 0; i < queueFamilyProp.size(); i++) {
     auto support = physicalDevice.getSurfaceSupportKHR(i, surface);
-    if (queueFamilyProp[i].queueFlags & vk::QueueFlagBits::eGraphics) {
+    if (!queueFamilyIndices.graphicsFamily.has_value() &&
+        queueFamilyProp[i].queueFlags & vk::QueueFlagBits::eGraphics) {
       queueFamilyIndices.graphicsFamily = i;
     }
-    if (support) {
+    if (!queueFamilyIndices.presentFamily.has_value() && support) {
       queueFamilyIndices.presentFamily = i;
     }
   }

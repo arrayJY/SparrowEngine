@@ -21,6 +21,7 @@ class VulkanRHI : public RHI {
   void initialize() override;
   ~VulkanRHI() override;
 
+#pragma region Initialize
  private:
   void initGLFW();
   void createInstance();
@@ -30,10 +31,13 @@ class VulkanRHI : public RHI {
   void createLogicalDevice();
   void createCommandPool();
   void createCommandBuffers();
+  void createSyncPrimitives();
   void createSwapChain() override;
   void createSwapChainImageView() override;
   void createFramebufferImageAndView() override;
+#pragma endregion
 
+#pragma region Structs
  private:
   struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
@@ -49,7 +53,9 @@ class VulkanRHI : public RHI {
     std::vector<vk::SurfaceFormatKHR> formats;
     std::vector<vk::PresentModeKHR> presentModes;
   };
+#pragma endregion
 
+#pragma region Utils
  private:
   static bool checkValidationLayerSupport(
       const std::vector<const char*>& layerNames);
@@ -66,7 +72,9 @@ class VulkanRHI : public RHI {
   static vk::PresentModeKHR chooseSwapPresentMode(
       const std::vector<vk::PresentModeKHR>& availablePresentModes);
   vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
+#pragma endregion
 
+#pragma region Vulkan
  private:
   // Instance
   vk::Instance instance;
@@ -108,11 +116,21 @@ class VulkanRHI : public RHI {
   vk::ImageView depthImageView;
   vk::DeviceMemory depthDeviceMemory;
 
+  // Sync Primitives
+  static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 3;
+  vk::Semaphore imageAvailableForRenderSemaphores[MAX_FRAMES_IN_FLIGHT];
+  vk::Semaphore imageFinishedForPresentationSemaphores[MAX_FRAMES_IN_FLIGHT];
+  vk::Fence isFrameInFlightFences[MAX_FRAMES_IN_FLIGHT];
+
+#pragma endregion
+
+#pragma region GLFW
   // GLFW
   static constexpr unsigned WIDTH = 800;
   static constexpr unsigned HEIGHT = 600;
-  GLFWwindow* window;
+  GLFWwindow* window = nullptr;
   uint32_t width = 0, height = 0;
+#pragma endregion
 };
 }  // namespace Sparrow
 
