@@ -55,7 +55,7 @@ void VulkanRHI::createInstance() {
                      .setApplicationVersion(VK_MAKE_VERSION(1, 0, 0))
                      .setPEngineName("Sparrow Engine")
                      .setEngineVersion(VK_MAKE_VERSION(1, 0, 0))
-                     .setApiVersion(VK_VERSION_1_3);
+                     .setApiVersion(VK_API_VERSION_1_3);
 
   static const std::vector<const char*> validationLayers{
       "VK_LAYER_KHRONOS_validation", "VK_LAYER_LUNARG_monitor"};
@@ -149,6 +149,7 @@ void VulkanRHI::createLogicalDevice() {
 
   device = gpu.createDevice(deviceInfo);
   presentQueue = device.getQueue(queueFamilyIndices.presentFamily.value(), 0);
+  depthImageFormat = findDepthFormat();
 }
 
 void VulkanRHI::createCommandPool() {
@@ -200,16 +201,17 @@ void VulkanRHI::createSwapChain() {
 
   uint32_t queueIndices[] = {indices.graphicsFamily.value(),
                              indices.presentFamily.value()};
-  auto imageSharingMode = graphicsIsSameAsPresent ? vk::SharingMode::eConcurrent
-                                                  : vk::SharingMode::eExclusive;
-  auto queueFamilyIndexCount = graphicsIsSameAsPresent ? 2 : 0;
-  auto pQueueIndices = graphicsIsSameAsPresent ? queueIndices : nullptr;
+  auto imageSharingMode = graphicsIsSameAsPresent
+                              ? vk::SharingMode::eExclusive
+                              : vk::SharingMode::eConcurrent;
+  auto queueFamilyIndexCount = graphicsIsSameAsPresent ? 0 : 2;
+  auto pQueueIndices = graphicsIsSameAsPresent ? nullptr : queueIndices;
 
   auto swapChainInfo =
       vk::SwapchainCreateInfoKHR()
           .setSurface(surface)
-          .setImageFormat(format)
           .setMinImageCount(imageCount)
+          .setImageFormat(swapChainImageFormat.format)
           .setImageColorSpace(swapChainImageFormat.colorSpace)
           .setImageExtent(swapChainExtent)
           .setImageArrayLayers(1)
@@ -234,7 +236,7 @@ void VulkanRHI::createSwapChainImageView() {
         vk::ImageViewCreateInfo()
             .setImage(swapChainImages[i])
             .setViewType(vk::ImageViewType::e2D)
-            .setFormat(format)
+            .setFormat(swapChainImageFormat.format)
             .setComponents(
                 vk::ComponentMapping(vk::ComponentSwizzle::eIdentity,
                                      vk::ComponentSwizzle::eIdentity,
@@ -248,16 +250,16 @@ void VulkanRHI::createSwapChainImageView() {
 
 void VulkanRHI::createFramebufferImageAndView() {
   VulkanUtils::createImage(gpu, device, swapChainExtent.width,
-                           swapChainExtent.height, format,
+                           swapChainExtent.height, depthImageFormat,
                            vk::ImageTiling::eOptimal,
                            vk::ImageUsageFlagBits::eInputAttachment |
                                vk::ImageUsageFlagBits::eDepthStencilAttachment |
                                vk::ImageUsageFlagBits::eTransferSrc,
                            vk::MemoryPropertyFlagBits::eDeviceLocal,
                            std::nullopt, 1, 1, depthImage, depthDeviceMemory);
-  depthImageView = VulkanUtils::createImageView(device, depthImage, format,
-                                                vk::ImageAspectFlagBits::eDepth,
-                                                vk::ImageViewType::e2D, 1, 1);
+  depthImageView = VulkanUtils::createImageView(
+      device, depthImage, depthImageFormat, vk::ImageAspectFlagBits::eDepth,
+      vk::ImageViewType::e2D, 1, 1);
 }
 
 bool VulkanRHI::checkValidationLayerSupport(
@@ -281,12 +283,14 @@ vk::Bool32 VulkanRHI::debugCallback(
   using DebugSeverityFlag = vk::DebugUtilsMessageSeverityFlagBitsEXT;
   switch (messageSeverity) {
     case DebugSeverityFlag::eInfo:
-      std::cout << "[validation layer (Info)]" << pCallbackData->pMessage
+      std::cerr << "[validation layer (Info)]" << pCallbackData->pMessage
                 << "\n";
       break;
     case DebugSeverityFlag::eVerbose:
-      std::cout << "[validation layer (Verbose)]" << pCallbackData->pMessage
-                << "\n";
+      /*
+    std::cout << "[validation layer (Verbose)]" << pCallbackData->pMessage
+              << "\n";
+              */
       break;
     case DebugSeverityFlag::eWarning:
       std::cerr << "[validation layer (Warning)]" << pCallbackData->pMessage
@@ -319,11 +323,11 @@ VulkanRHI::QueueFamilyIndices VulkanRHI::findQueueFamilies(
 }
 
 VulkanRHI::SwapChainSupportDetails VulkanRHI::querySwapChainSupport(
-    vk::PhysicalDevice device) {
+    vk::PhysicalDevice physical_device) {
   return SwapChainSupportDetails{
-      .capabilities = device.getSurfaceCapabilitiesKHR(surface),
-      .formats = device.getSurfaceFormatsKHR(surface),
-      .presentModes = device.getSurfacePresentModesKHR(surface),
+      .capabilities = physical_device.getSurfaceCapabilitiesKHR(surface),
+      .formats = physical_device.getSurfaceFormatsKHR(surface),
+      .presentModes = physical_device.getSurfacePresentModesKHR(surface),
   };
 }
 
@@ -365,6 +369,18 @@ vk::Extent2D VulkanRHI::chooseSwapExtent(
                    capabilities.maxImageExtent.height);
     return actualExtent;
   }
+}
+vk::Format VulkanRHI::findDepthFormat() {
+  const auto candidates = {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint,
+                           vk::Format::eD24UnormS8Uint};
+  for (auto format : candidates) {
+    auto props = gpu.getFormatProperties(format);
+    auto depthFeature = vk::FormatFeatureFlagBits::eDepthStencilAttachment;
+    if ((props.optimalTilingFeatures & depthFeature) == depthFeature) {
+      return format;
+    }
+  }
+  return vk::Format::eUndefined;
 }
 
 }  // namespace Sparrow

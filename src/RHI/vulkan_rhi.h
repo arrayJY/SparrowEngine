@@ -66,12 +66,14 @@ class VulkanRHI : public RHI {
                 void* pUserData);
   VulkanRHI::QueueFamilyIndices findQueueFamilies(
       vk::PhysicalDevice physicalDevice);
-  SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device);
+  SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice physical_device);
   static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
       const std::vector<vk::SurfaceFormatKHR>& availableFormats);
   static vk::PresentModeKHR chooseSwapPresentMode(
       const std::vector<vk::PresentModeKHR>& availablePresentModes);
   vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
+  vk::Format findDepthFormat();
+
 #pragma endregion
 
 #pragma region Vulkan
@@ -100,16 +102,15 @@ class VulkanRHI : public RHI {
   HINSTANCE hInstance;
 
   // Swapchain
-  vk::Format format;
   vk::SwapchainKHR swapChain;
   std::vector<vk::Image> swapChainImages;
   vk::SurfaceFormatKHR swapChainImageFormat;
   vk::Extent2D swapChainExtent;
   std::vector<vk::ImageView> swapChainImagesViews;
-  uint32_t currentImage = 0;
 
   // Framebuffer
   std::vector<vk::Framebuffer> framebuffers;
+  vk::Format depthImageFormat;
 
   // Depth image
   vk::Image depthImage;
