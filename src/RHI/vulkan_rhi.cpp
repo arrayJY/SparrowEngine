@@ -29,6 +29,7 @@ void VulkanRHI::initialize() {
   createLogicalDevice();
   createCommandPool();
   createCommandBuffers();
+  createDescriptorPool();
   createSyncPrimitives();
   createSwapChain();
   createSwapChainImageView();
@@ -166,6 +167,16 @@ void VulkanRHI::createCommandBuffers() {
                        .setLevel(vk::CommandBufferLevel::ePrimary)
                        .setCommandBufferCount(1);
   commandBuffers = device.allocateCommandBuffers(allocInfo);
+}
+
+void VulkanRHI::createDescriptorPool() {
+  const auto poolSize =
+      vk::DescriptorPoolSize().setDescriptorCount(MAX_FRAMES_IN_FLIGHT);
+  const auto poolCreateInfo =
+      vk::DescriptorPoolCreateInfo().setPoolSizeCount(1).setPPoolSizes(
+          &poolSize)
+      .setMaxSets(MAX_FRAMES_IN_FLIGHT);
+  descriptorPool = device.createDescriptorPool(poolCreateInfo);
 }
 
 void VulkanRHI::createSyncPrimitives() {

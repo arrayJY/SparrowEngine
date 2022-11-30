@@ -31,6 +31,7 @@ class VulkanRHI : public RHI {
   void createLogicalDevice();
   void createCommandPool();
   void createCommandBuffers();
+  void createDescriptorPool();
   void createSyncPrimitives();
   void createSwapChain() override;
   void createSwapChainImageView() override;
@@ -122,6 +123,9 @@ class VulkanRHI : public RHI {
   vk::Semaphore imageAvailableForRenderSemaphores[MAX_FRAMES_IN_FLIGHT];
   vk::Semaphore imageFinishedForPresentationSemaphores[MAX_FRAMES_IN_FLIGHT];
   vk::Fence isFrameInFlightFences[MAX_FRAMES_IN_FLIGHT];
+
+  // Descriptor pool
+  vk::DescriptorPool descriptorPool;
 
 #pragma endregion
 
