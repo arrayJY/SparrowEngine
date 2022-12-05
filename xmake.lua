@@ -11,6 +11,7 @@ set_languages("cxx20")
 target("SparrowEngine")
     set_kind("binary")
     add_files("src/*.cpp")
+    add_files("src/function/*.cpp")
     add_files("src/RHI/*.cpp")
     add_packages("glfw", "vulkansdk")
 

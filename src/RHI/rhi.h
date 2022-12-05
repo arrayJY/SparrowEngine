@@ -2,9 +2,14 @@
 #define SPARROWENGINE_RHI_H
 
 namespace Sparrow {
+class WindowSystem;
+struct RHIInitInfo {
+  WindowSystem& windowSystem;
+};
+
 class RHI {
  public:
-  virtual void initialize() = 0;
+  virtual void initialize(const RHIInitInfo& initInfo) = 0;
   // creation
   virtual void createSwapChain() = 0;
   virtual void createSwapChainImageView() = 0;
@@ -14,6 +19,7 @@ class RHI {
 };
 
 inline RHI::~RHI() = default;
+
 };  // namespace Sparrow
 
 #endif  // SPARROWENGINE_RHI_H

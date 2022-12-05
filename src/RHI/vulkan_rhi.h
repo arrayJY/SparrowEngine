@@ -4,26 +4,21 @@
 #include "rhi.h"
 
 #define VK_USE_PLATFORM_WIN32_KHR
-
 #include <vulkan/vulkan.hpp>
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h>
-
 #include <optional>
+
+struct GLFWwindow;
 
 namespace Sparrow {
 class VulkanRHI : public RHI {
  public:
-  void initialize() override;
+  void initialize(const RHIInitInfo& initInfo) override;
   ~VulkanRHI() override;
 
 #pragma region Initialize
  private:
-  void initGLFW();
+  void initGLFW(WindowSystem& windowSystem);
   void createInstance();
   void setupDebugMessenger();
   void createSurface();
@@ -67,7 +62,8 @@ class VulkanRHI : public RHI {
                 void* pUserData);
   VulkanRHI::QueueFamilyIndices findQueueFamilies(
       vk::PhysicalDevice physicalDevice);
-  SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice physical_device);
+  SwapChainSupportDetails querySwapChainSupport(
+      vk::PhysicalDevice physical_device);
   static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
       const std::vector<vk::SurfaceFormatKHR>& availableFormats);
   static vk::PresentModeKHR chooseSwapPresentMode(
@@ -99,8 +95,6 @@ class VulkanRHI : public RHI {
   // Surface
   vk::SurfaceKHR surface;
   vk::PresentModeKHR presentMode;
-  HWND hwnd;
-  HINSTANCE hInstance;
 
   // Swapchain
   vk::SwapchainKHR swapChain;

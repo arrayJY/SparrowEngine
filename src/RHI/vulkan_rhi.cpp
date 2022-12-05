@@ -9,6 +9,9 @@
 #include <ranges>
 #include <set>
 #include <vector>
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+#include "../function/window_system.h"
 #include "vulkan_utils.h"
 
 namespace Sparrow {
@@ -20,8 +23,8 @@ static constexpr bool enableValidationLayers = false;
 static constexpr bool enableValidationLayers = true;
 #endif
 
-void VulkanRHI::initialize() {
-  initGLFW();
+void VulkanRHI::initialize(const RHIInitInfo& initInfo) {
+  initGLFW(initInfo.windowSystem);
   createInstance();
   setupDebugMessenger();
   createSurface();
@@ -38,15 +41,9 @@ void VulkanRHI::initialize() {
 
 VulkanRHI::~VulkanRHI() {}
 
-void VulkanRHI::initGLFW() {
-  glfwInit();
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-  window = glfwCreateWindow(WIDTH, HEIGHT, "Sparrow Engine", nullptr, nullptr);
-  hwnd = glfwGetWin32Window(window);
-  hInstance = GetModuleHandle(nullptr);
-  int w, h;
-  glfwGetWindowSize(window, &w, &h);
+void VulkanRHI::initGLFW(WindowSystem& windowSystem) {
+  window = windowSystem.getWindow();
+  auto [w, h] = windowSystem.getWindowSize();
   width = w, height = h;
 }
 
@@ -107,9 +104,9 @@ void VulkanRHI::setupDebugMessenger() {
 }
 
 void VulkanRHI::createSurface() {
-  auto surfaceInfo =
-      vk::Win32SurfaceCreateInfoKHR().setHwnd(hwnd).setHinstance(hInstance);
-  surface = instance.createWin32SurfaceKHR(surfaceInfo);
+  auto _surface = surface.operator VkSurfaceKHR();
+  glfwCreateWindowSurface(instance, window, nullptr, &_surface);
+  surface = _surface;
 }
 
 void VulkanRHI::pickPhysicalDevice() {
@@ -172,10 +169,10 @@ void VulkanRHI::createCommandBuffers() {
 void VulkanRHI::createDescriptorPool() {
   const auto poolSize =
       vk::DescriptorPoolSize().setDescriptorCount(MAX_FRAMES_IN_FLIGHT);
-  const auto poolCreateInfo =
-      vk::DescriptorPoolCreateInfo().setPoolSizeCount(1).setPPoolSizes(
-          &poolSize)
-      .setMaxSets(MAX_FRAMES_IN_FLIGHT);
+  const auto poolCreateInfo = vk::DescriptorPoolCreateInfo()
+                                  .setPoolSizeCount(1)
+                                  .setPPoolSizes(&poolSize)
+                                  .setMaxSets(MAX_FRAMES_IN_FLIGHT);
   descriptorPool = device.createDescriptorPool(poolCreateInfo);
 }
 
