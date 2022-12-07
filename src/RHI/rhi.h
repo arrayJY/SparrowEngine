@@ -1,10 +1,12 @@
 #ifndef SPARROWENGINE_RHI_H
 #define SPARROWENGINE_RHI_H
 
+#include <memory>
+
 namespace Sparrow {
 class WindowSystem;
 struct RHIInitInfo {
-  WindowSystem& windowSystem;
+  std::shared_ptr<WindowSystem> windowSystem;
 };
 
 class RHI {
