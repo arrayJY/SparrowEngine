@@ -11,7 +11,7 @@
 #include <vector>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include "../function/window_system.h"
+#include "function/window_system.h"
 #include "vulkan_utils.h"
 
 namespace Sparrow {
@@ -24,7 +24,7 @@ static constexpr bool enableValidationLayers = true;
 #endif
 
 void VulkanRHI::initialize(const RHIInitInfo& initInfo) {
-  initGLFW(initInfo.windowSystem);
+  initGLFW(initInfo.windowSystem.get());
   createInstance();
   setupDebugMessenger();
   createSurface();
@@ -41,9 +41,9 @@ void VulkanRHI::initialize(const RHIInitInfo& initInfo) {
 
 VulkanRHI::~VulkanRHI() {}
 
-void VulkanRHI::initGLFW(WindowSystem& windowSystem) {
-  window = windowSystem.getWindow();
-  auto [w, h] = windowSystem.getWindowSize();
+void VulkanRHI::initGLFW(WindowSystem* windowSystem) {
+  window = windowSystem->getWindow();
+  auto [w, h] = windowSystem->getWindowSize();
   width = w, height = h;
 }
 

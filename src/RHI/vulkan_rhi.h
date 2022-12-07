@@ -6,11 +6,13 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.hpp>
 
+#include <memory>
 #include <optional>
 
 struct GLFWwindow;
 
 namespace Sparrow {
+class WindowSystem;
 class VulkanRHI : public RHI {
  public:
   void initialize(const RHIInitInfo& initInfo) override;
@@ -18,7 +20,7 @@ class VulkanRHI : public RHI {
 
 #pragma region Initialize
  private:
-  void initGLFW(WindowSystem& windowSystem);
+  void initGLFW(WindowSystem* windowSystem);
   void createInstance();
   void setupDebugMessenger();
   void createSurface();
