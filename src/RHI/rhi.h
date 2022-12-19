@@ -2,6 +2,7 @@
 #define SPARROWENGINE_RHI_H
 
 #include <memory>
+#include <span>
 #include "rhi_struct.h"
 
 namespace Sparrow {
@@ -17,6 +18,7 @@ class RHI {
   virtual void createSwapChain() = 0;
   virtual void createSwapChainImageView() = 0;
   virtual void createFramebufferImageAndView() = 0;
+  virtual std::unique_ptr<RHIShader> createShaderModule(std::span<uint32_t> shader_code) = 0;
   virtual bool createGraphicsPipeline(
       const RHIGraphicsPipelineCreateInfo& createInfo) = 0;
   virtual std::unique_ptr<RHIRenderPass> createRenderPass(

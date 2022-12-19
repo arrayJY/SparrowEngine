@@ -36,9 +36,9 @@ class VulkanRHI : public RHI {
   void createSwapChain() override;
   void createSwapChainImageView() override;
   void createFramebufferImageAndView() override;
+  std::unique_ptr<RHIShader> createShaderModule(std::span<uint32_t> shader_code) override;
   bool createGraphicsPipeline(
       const RHIGraphicsPipelineCreateInfo& createInfo) override;
-
   std::unique_ptr<RHIRenderPass> createRenderPass(
       const RHIRenderPassCreateInfo& createInfo) override;
   std::unique_ptr<RHIPipelineLayout> createPipelineLayout(

@@ -270,6 +270,22 @@ void VulkanRHI::createFramebufferImageAndView() {
       vk::ImageViewType::e2D, 1, 1);
 }
 
+std::unique_ptr<RHIShader> VulkanRHI::createShaderModule(
+    std::span<uint32_t> shader_code) {
+  auto shaderModuleCreateInfo =
+      vk::ShaderModuleCreateInfo().setCode(shader_code);
+
+  vk::ShaderModule vkShaderModule;
+  if (device.createShaderModule(&shaderModuleCreateInfo, nullptr,
+                                &vkShaderModule) != vk::Result::eSuccess) {
+    std::cerr << "CreateShaderModule failed.\n";
+    return nullptr;
+  }
+  auto vulkanShader = std::make_unique<VulkanShader>();
+  vulkanShader->setResource(vkShaderModule);
+  return vulkanShader;
+}
+
 template <typename T, typename U>
   requires std::is_enum_v<T>
 T Cast(U value) {
