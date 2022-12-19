@@ -13,15 +13,22 @@ struct RHIInitInfo {
 class RHI {
  public:
   virtual void initialize(const RHIInitInfo& initInfo) = 0;
-  // creation
+#pragma region Creation
   virtual void createSwapChain() = 0;
   virtual void createSwapChainImageView() = 0;
   virtual void createFramebufferImageAndView() = 0;
   virtual bool createGraphicsPipeline(
       const RHIGraphicsPipelineCreateInfo& createInfo) = 0;
-  virtual std::unique_ptr<RHIRenderPass> createRenderPass(const RHIRenderPassCreateInfo& createInfo) = 0;
-  virtual std::unique_ptr<RHIPipelineLayout> createPipelineLayout(const RHIPipelineLayoutCreateInfo& createInfo) = 0;
- 
+  virtual std::unique_ptr<RHIRenderPass> createRenderPass(
+      const RHIRenderPassCreateInfo& createInfo) = 0;
+  virtual std::unique_ptr<RHIPipelineLayout> createPipelineLayout(
+      const RHIPipelineLayoutCreateInfo& createInfo) = 0;
+#pragma endregion
+
+#pragma region Command
+  virtual void submitRendering() = 0;
+#pragma endregion
+
   virtual ~RHI() = 0;
 };
 

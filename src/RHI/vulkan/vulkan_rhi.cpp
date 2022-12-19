@@ -474,6 +474,48 @@ std::unique_ptr<RHIPipelineLayout> VulkanRHI::createPipelineLayout(
   return pipelineLayout;
 }
 
+void VulkanRHI::submitRendering() {
+  auto submitInfo =
+      vk::SubmitInfo()
+          .setWaitSemaphoreCount(1)
+          .setPWaitSemaphores(
+              &imageAvailableForRenderSemaphores[currentSwapChainImageIndex])
+          .setCommandBufferCount(1)
+          .setPCommandBuffers(&commandBuffers[currentFrameIndex])
+          .setSignalSemaphoreCount(1)
+          .setPSignalSemaphores(
+              &imageFinishedForPresentationSemaphores[currentFrameIndex]);
+
+  auto presentInfo =
+      vk::PresentInfoKHR()
+          .setWaitSemaphoreCount(1)
+          .setPWaitSemaphores(
+              &imageFinishedForPresentationSemaphores[currentFrameIndex])
+          .setSwapchainCount(1)
+          .setPSwapchains(&swapChain)
+          .setPImageIndices(&currentSwapChainImageIndex);
+
+  if (device.resetFences(1, &isFrameInFlightFences[currentFrameIndex]) !=
+      vk::Result::eSuccess) {
+    std::cerr << "DeviceResetFences failed.";
+    return;
+  }
+
+  if (presentQueue.submit(1, &submitInfo,
+                          isFrameInFlightFences[currentFrameIndex]) !=
+      vk::Result::eSuccess) {
+    std::cerr << "QueueResetFences failed.";
+    return;
+  }
+
+  if (presentQueue.presentKHR(presentInfo) != vk::Result::eSuccess) {
+    std::cerr << "QueuePresentKHR failed.";
+    return;
+  }
+
+  currentFrameIndex = (currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
 bool VulkanRHI::checkValidationLayerSupport(
     const std::vector<const char*>& layerNames) {
   const std::vector<vk::LayerProperties> properties =

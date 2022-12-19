@@ -39,10 +39,12 @@ class VulkanRHI : public RHI {
   bool createGraphicsPipeline(
       const RHIGraphicsPipelineCreateInfo& createInfo) override;
 
+  std::unique_ptr<RHIRenderPass> createRenderPass(
+      const RHIRenderPassCreateInfo& createInfo) override;
+  std::unique_ptr<RHIPipelineLayout> createPipelineLayout(
+      const RHIPipelineLayoutCreateInfo& createInfo) override;
 
-  std::unique_ptr<RHIRenderPass> createRenderPass(const RHIRenderPassCreateInfo& createInfo) override;
-  std::unique_ptr<RHIPipelineLayout> createPipelineLayout(const RHIPipelineLayoutCreateInfo& createInfo) override;
-
+  void submitRendering() override;
 #pragma endregion
 
 #pragma region Structs
@@ -114,6 +116,7 @@ class VulkanRHI : public RHI {
   vk::SurfaceFormatKHR swapChainImageFormat;
   vk::Extent2D swapChainExtent;
   std::vector<vk::ImageView> swapChainImagesViews;
+  uint32_t currentSwapChainImageIndex;
 
   // Framebuffer
   std::vector<vk::Framebuffer> framebuffers;
@@ -126,6 +129,7 @@ class VulkanRHI : public RHI {
 
   // Sync Primitives
   static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 3;
+  uint8_t currentFrameIndex = 0;
   vk::Semaphore imageAvailableForRenderSemaphores[MAX_FRAMES_IN_FLIGHT];
   vk::Semaphore imageFinishedForPresentationSemaphores[MAX_FRAMES_IN_FLIGHT];
   vk::Fence isFrameInFlightFences[MAX_FRAMES_IN_FLIGHT];
