@@ -3,6 +3,8 @@
 //
 
 #include "engine.h"
+#include "function/render_system.h"
+#include "function/window_system.h"
 #include "global_context.h"
 
 namespace Sparrow {
@@ -11,12 +13,25 @@ void Engine::startEngine() {
   gContext.initialize();
 }
 
-void Engine::tick(float deltaTime) {}
+void Engine::tick(float deltaTime) {
+  logicalTick(deltaTime);
+  renderTick(deltaTime);
+}
 
 void Engine::shutdown() {}
 
 void Engine::logicalTick(float deltaTime) {}
 
 void Engine::renderTick(float deltaTime) {}
+
+float Engine::calcOneFrameDeltaTime() const {
+  return 0.0;  // TODO
+}
+
+void Engine::mainLoop() {
+  while (!gContext.windowSystem->shouldClose()) {
+    tick(calcOneFrameDeltaTime());
+  }
+}
 
 }  // namespace Sparrow

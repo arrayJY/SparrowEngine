@@ -1,7 +1,7 @@
 #ifndef SPARROWENGINE_VULKAN_RHI_H
 #define SPARROWENGINE_VULKAN_RHI_H
 
-#include "rhi.h"
+#include "RHI/rhi.h"
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.hpp>
@@ -20,7 +20,7 @@ class VulkanRHI : public RHI {
 
 #pragma region Initialize
  private:
-  void initGLFW(WindowSystem* windowSystem);
+  void init(WindowSystem* windowSystem);
   void createInstance();
   void setupDebugMessenger();
   void createSurface();
@@ -33,6 +33,7 @@ class VulkanRHI : public RHI {
   void createSwapChain() override;
   void createSwapChainImageView() override;
   void createFramebufferImageAndView() override;
+  RHIPipelineStateObject createGraphicsPipeline(const RHIGraphicsPipelineCreateInfo &createInfo) override;
 #pragma endregion
 
 #pragma region Structs

@@ -13,6 +13,9 @@ class Engine {
   void shutdown();
 
  private:
+  float calcOneFrameDeltaTime() const;
+  void mainLoop();
+
   void logicalTick(float deltaTime);
   void renderTick(float deltaTime);
 };

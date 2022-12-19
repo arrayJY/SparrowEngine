@@ -24,7 +24,7 @@ static constexpr bool enableValidationLayers = true;
 #endif
 
 void VulkanRHI::initialize(const RHIInitInfo& initInfo) {
-  initGLFW(initInfo.windowSystem.get());
+  init(initInfo.windowSystem.get());
   createInstance();
   setupDebugMessenger();
   createSurface();
@@ -41,7 +41,7 @@ void VulkanRHI::initialize(const RHIInitInfo& initInfo) {
 
 VulkanRHI::~VulkanRHI() {}
 
-void VulkanRHI::initGLFW(WindowSystem* windowSystem) {
+void VulkanRHI::init(WindowSystem* windowSystem) {
   window = windowSystem->getWindow();
   auto [w, h] = windowSystem->getWindowSize();
   width = w, height = h;
@@ -268,6 +268,174 @@ void VulkanRHI::createFramebufferImageAndView() {
   depthImageView = VulkanUtils::createImageView(
       device, depthImage, depthImageFormat, vk::ImageAspectFlagBits::eDepth,
       vk::ImageViewType::e2D, 1, 1);
+}
+
+template <typename T, typename U>
+  requires std::is_enum_v<T>
+T Cast(U value) {
+  return static_cast<T>(value);
+}
+template <typename T, typename U>
+  requires std::is_class_v<T>
+T Cast(U value) {
+  return *reinterpret_cast<T*>(&value);
+}
+
+template <typename T, typename U>
+const T* Cast(U* value) {
+  return reinterpret_cast<const T*>(value);
+}
+
+RHIPipelineStateObject VulkanRHI::createGraphicsPipeline(
+    const RHIGraphicsPipelineCreateInfo& createInfo) {
+  const auto shaderStageCount = createInfo.stageCount;
+  const auto& rhiShaderStages = createInfo.shaderStageCreateInfo;
+  const auto& rhiDynamicState = createInfo.dynamicStateCreateInfo;
+  const auto& rhiVertexInputState = createInfo.vertexInputStateCreateInfo;
+  const auto& rhiInputAssemblyState = createInfo.inputAssemblyStateCreateInfo;
+  const auto& rhiViewportState = createInfo.viewportStateCreateInfo;
+  const auto& rhiRasterizationState = createInfo.rasterizationStateCreateInfo;
+  const auto& rhiMultisampleState = createInfo.multisampleStateCreateInfo;
+  const auto& rhiDepthStencilState = createInfo.depthStencilStateCreateInfo;
+  const auto& rhiColorBlendState = createInfo.colorBlendStateCreateInfo;
+  const auto& rhiPipelineLayout = createInfo.pipelineLayoutCreateInfo;
+  const auto& rhiRenderPass = createInfo.renderPassCreateInfo;
+
+  std::vector<vk::PipelineShaderStageCreateInfo> shaderStageCreateInfos(
+      shaderStageCount);
+
+  for (auto i = 0; i < shaderStageCount; i++) {
+    const auto& rhiShaderStage = rhiShaderStages[i];
+    auto& shaderStageCreateInfo = shaderStageCreateInfos[i];
+
+    shaderStageCreateInfo
+        .setStage(Cast<vk::ShaderStageFlagBits>(rhiShaderStage.stage))
+        .setModule(Cast<vk::ShaderModule>(*rhiShaderStage.module))
+        .setPName(rhiShaderStage.name)
+        .setPSpecializationInfo(
+            Cast<vk::SpecializationInfo>(rhiShaderStage.specializationInfo));
+  }
+
+  auto dynamicStateCreateInfo =
+      vk::PipelineDynamicStateCreateInfo()
+          .setDynamicStateCount(rhiDynamicState->dynamicStateCount)
+          .setPDynamicStates(
+              Cast<vk::DynamicState>(rhiDynamicState->dynamicStates));
+  auto vertexInputStateCreateInfo =
+      vk::PipelineVertexInputStateCreateInfo()
+          .setVertexBindingDescriptionCount(
+              rhiVertexInputState->vertexBindingDescriptionCount)
+          .setPVertexBindingDescriptions(
+              Cast<vk::VertexInputBindingDescription>(
+                  rhiVertexInputState->vertexBindingDescriptions))
+          .setVertexAttributeDescriptionCount(
+              rhiVertexInputState->vertexAttributeDescriptionCount)
+          .setPVertexAttributeDescriptions(
+              Cast<vk::VertexInputAttributeDescription>(
+                  rhiVertexInputState->vertexAttributeDescriptions));
+  auto inputAssemblyStateCreateInfo =
+      vk::PipelineInputAssemblyStateCreateInfo()
+          .setTopology(
+              Cast<vk::PrimitiveTopology>(rhiInputAssemblyState->topology))
+          .setPrimitiveRestartEnable(
+              rhiInputAssemblyState->primitiveRestartEnabled);
+
+  auto viewportStateCreateInfo =
+      vk::PipelineViewportStateCreateInfo()
+          .setViewportCount(rhiViewportState->viewportCount)
+          .setPViewports(Cast<vk::Viewport>(rhiViewportState->viewports))
+          .setScissorCount(rhiViewportState->scissorCount)
+          .setPScissors(Cast<vk::Rect2D>(rhiViewportState->scissors));
+
+  auto rasterizationStateCreateInfo =
+      vk::PipelineRasterizationStateCreateInfo()
+          .setDepthClampEnable(rhiRasterizationState->depthClampEnable)
+          .setRasterizerDiscardEnable(
+              rhiRasterizationState->rasterizerDiscardEnable)
+          .setPolygonMode(
+              Cast<vk::PolygonMode>(rhiRasterizationState->polygonMode))
+          .setLineWidth(rhiRasterizationState->lineWidth)
+          .setCullMode(
+              Cast<vk::CullModeFlagBits>(rhiRasterizationState->cullMode))
+          .setFrontFace(Cast<vk::FrontFace>(rhiRasterizationState->frontFace))
+          .setDepthBiasEnable(rhiRasterizationState->depthBiasEnable)
+          .setDepthBiasConstantFactor(
+              rhiRasterizationState->depthBiasConstantFactor)
+          .setDepthBiasClamp(rhiRasterizationState->depthBiasClamp)
+          .setDepthBiasSlopeFactor(rhiRasterizationState->depthBiasSlopeFactor);
+
+  auto multisampleStateCreateInfo =
+      vk::PipelineMultisampleStateCreateInfo()
+          .setSampleShadingEnable(rhiMultisampleState->sampleShadingEnable)
+          .setRasterizationSamples(Cast<vk::SampleCountFlagBits>(
+              rhiMultisampleState->rasterizationSamples))
+          .setMinSampleShading(rhiMultisampleState->minSampleShading)
+          .setPSampleMask(rhiMultisampleState->sampleMask)
+          .setAlphaToCoverageEnable(rhiMultisampleState->alphaToCoverageEnable)
+          .setAlphaToOneEnable(rhiMultisampleState->alphaToOneEnable);
+
+  auto depthStencilStateCreateInfo =
+      vk::PipelineDepthStencilStateCreateInfo()
+          .setDepthTestEnable(rhiDepthStencilState->depthTestEnable)
+          .setDepthWriteEnable(rhiDepthStencilState->depthWriteEnable)
+          .setDepthCompareOp(
+              Cast<vk::CompareOp>(rhiDepthStencilState->depthCompareOp))
+          .setDepthBoundsTestEnable(rhiDepthStencilState->depthBoundsTestEnable)
+          .setStencilTestEnable(rhiDepthStencilState->stencilTestEnable)
+          .setFront(Cast<vk::StencilOpState>(rhiDepthStencilState->front))
+          .setBack(Cast<vk::StencilOpState>(rhiDepthStencilState->back))
+          .setMinDepthBounds(rhiDepthStencilState->minDepthBounds)
+          .setMaxDepthBounds(rhiDepthStencilState->maxDepthBounds);
+
+  auto colorBlendStateCreateInfo =
+      vk::PipelineColorBlendStateCreateInfo()
+          .setLogicOpEnable(rhiColorBlendState->logicOpEnable)
+          .setLogicOp(Cast<vk::LogicOp>(rhiColorBlendState->logicOp))
+          .setAttachmentCount(rhiColorBlendState->attachmentCount)
+          .setPAttachments(Cast<vk::PipelineColorBlendAttachmentState>(
+              rhiColorBlendState->attachments))
+          .setBlendConstants(rhiColorBlendState->blendConstants);
+
+  auto pipelineLayoutCreateInfo =
+      vk::PipelineLayoutCreateInfo()
+          .setSetLayoutCount(rhiPipelineLayout->setLayoutCount)
+          .setPSetLayouts(
+              Cast<vk::DescriptorSetLayout>(rhiPipelineLayout->setLayouts))
+          .setPushConstantRangeCount(rhiPipelineLayout->pushConstantRangeCount)
+          .setPPushConstantRanges(Cast<vk::PushConstantRange>(
+              rhiPipelineLayout->pushConstantRanges));
+
+  auto renderPassCreateInfo =
+      vk::RenderPassCreateInfo()
+          .setAttachmentCount(rhiRenderPass->attachmentCount)
+          .setPAttachments(
+              Cast<vk::AttachmentDescription>(rhiRenderPass->attachments))
+          .setSubpassCount(rhiRenderPass->subpassCount)
+          .setPSubpasses(
+              Cast<vk::SubpassDescription>(rhiRenderPass->subpasses));
+
+  auto pipelineLayout = device.createPipelineLayout(pipelineLayoutCreateInfo);
+  auto renderPass = device.createRenderPass(renderPassCreateInfo);
+
+  auto graphicsPipelineCreateInfo =
+      vk::GraphicsPipelineCreateInfo()
+          .setStageCount(shaderStageCount)
+          .setPStages(shaderStageCreateInfos.data())
+          .setPVertexInputState(&vertexInputStateCreateInfo)
+          .setPInputAssemblyState(&inputAssemblyStateCreateInfo)
+          .setPViewportState(&viewportStateCreateInfo)
+          .setPRasterizationState(&rasterizationStateCreateInfo)
+          .setPMultisampleState(&multisampleStateCreateInfo)
+          .setPDepthStencilState(&depthStencilStateCreateInfo)
+          .setPColorBlendState(&colorBlendStateCreateInfo)
+          .setPDynamicState(&dynamicStateCreateInfo)
+          .setLayout(pipelineLayout)
+          .setRenderPass(renderPass)
+          .setSubpass(0)
+          .setBasePipelineHandle(nullptr)
+          .setBasePipelineIndex(-1);
+
+  return {};
 }
 
 bool VulkanRHI::checkValidationLayerSupport(

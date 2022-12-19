@@ -2,6 +2,7 @@
 #define SPARROWENGINE_RHI_H
 
 #include <memory>
+#include "rhi_struct.h"
 
 namespace Sparrow {
 class WindowSystem;
@@ -16,6 +17,8 @@ class RHI {
   virtual void createSwapChain() = 0;
   virtual void createSwapChainImageView() = 0;
   virtual void createFramebufferImageAndView() = 0;
+  virtual RHIPipelineStateObject createGraphicsPipeline(
+      const RHIGraphicsPipelineCreateInfo& createInfo) = 0;
 
   virtual ~RHI() = 0;
 };
