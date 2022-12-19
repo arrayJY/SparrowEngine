@@ -3,7 +3,7 @@
 //
 
 #include "render_system.h"
-#include "RHI/vulkan_rhi.h"
+#include "RHI/vulkan/vulkan_rhi.h"
 #include "function/window_system.h"
 
 namespace Sparrow {

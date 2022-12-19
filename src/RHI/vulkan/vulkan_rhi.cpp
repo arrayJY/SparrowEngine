@@ -124,7 +124,6 @@ void VulkanRHI::createLogicalDevice() {
   if (!queueFamilyIndices.isComplete()) {
     throw std::runtime_error("Find queue families failed.");
   }
-  auto graphicIndex = queueFamilyIndices.graphicsFamily.value();
   auto feature = vk::PhysicalDeviceFeatures().setGeometryShader(VK_TRUE);
   deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
@@ -282,6 +281,11 @@ T Cast(U value) {
   return *reinterpret_cast<T*>(&value);
 }
 
+template <typename R, typename T>
+R* CastResource(T* value) {
+  return static_cast<R*>(value);
+}
+
 template <typename T, typename U>
 const T* Cast(U* value) {
   return reinterpret_cast<const T*>(value);
@@ -309,8 +313,9 @@ bool VulkanRHI::createGraphicsPipeline(
 
     shaderStageCreateInfo
         .setStage(Cast<vk::ShaderStageFlagBits>(rhiShaderStage.stage))
-        .setModule(Cast<vk::ShaderModule>(*rhiShaderStage.module))
         .setPName(rhiShaderStage.name)
+        .setModule(
+            CastResource<VulkanShader>(rhiShaderStage.module)->getResource())
         .setPSpecializationInfo(
             Cast<vk::SpecializationInfo>(rhiShaderStage.specializationInfo));
   }
@@ -395,29 +400,6 @@ bool VulkanRHI::createGraphicsPipeline(
               rhiColorBlendState->attachments))
           .setBlendConstants(rhiColorBlendState->blendConstants);
 
-  /*
-    auto pipelineLayoutCreateInfo =
-        vk::PipelineLayoutCreateInfo()
-            .setSetLayoutCount(rhiPipelineLayout->setLayoutCount)
-            .setPSetLayouts(
-                Cast<vk::DescriptorSetLayout>(rhiPipelineLayout->setLayouts))
-            .setPushConstantRangeCount(rhiPipelineLayout->pushConstantRangeCount)
-            .setPPushConstantRanges(Cast<vk::PushConstantRange>(
-                rhiPipelineLayout->pushConstantRanges));
-
-    auto renderPassCreateInfo =
-        vk::RenderPassCreateInfo()
-            .setAttachmentCount(rhiRenderPass->attachmentCount)
-            .setPAttachments(
-                Cast<vk::AttachmentDescription>(rhiRenderPass->attachments))
-            .setSubpassCount(rhiRenderPass->subpassCount)
-            .setPSubpasses(
-                Cast<vk::SubpassDescription>(rhiRenderPass->subpasses));
-
-    auto pipelineLayout = device.createPipelineLayout(pipelineLayoutCreateInfo);
-    auto renderPass = device.createRenderPass(renderPassCreateInfo);
-    */
-
   auto graphicsPipelineCreateInfo =
       vk::GraphicsPipelineCreateInfo()
           .setStageCount(shaderStageCount)
@@ -430,13 +412,14 @@ bool VulkanRHI::createGraphicsPipeline(
           .setPDepthStencilState(&depthStencilStateCreateInfo)
           .setPColorBlendState(&colorBlendStateCreateInfo)
           .setPDynamicState(&dynamicStateCreateInfo)
-          .setLayout(Cast<VulkanPipelineLayout>(createInfo.pipelineLayout)
-                         ->getResource())
-          .setRenderPass(
-              Cast<VulkanRenderPass>(createInfo.renderPass)->getResource())
+          .setLayout(
+              CastResource<VulkanPipelineLayout>(createInfo.pipelineLayout)
+                  ->getResource())
+          .setRenderPass(CastResource<VulkanRenderPass>(createInfo.renderPass)
+                             ->getResource())
           .setSubpass(createInfo.subpass)
           .setBasePipelineHandle(
-              Cast<VulkanPipeline>(createInfo.basePipelineHandle)
+              CastResource<VulkanPipeline>(createInfo.basePipelineHandle)
                   ->getResource())
           .setBasePipelineIndex(createInfo.basePipelineIndex);
 
@@ -448,6 +431,47 @@ bool VulkanRHI::createGraphicsPipeline(
   }
 
   return false;
+}
+
+std::unique_ptr<RHIRenderPass> VulkanRHI::createRenderPass(
+    const RHIRenderPassCreateInfo& createInfo) {
+  auto renderPassCreateInfo =
+      vk::RenderPassCreateInfo()
+          .setAttachmentCount(createInfo.attachmentCount)
+          .setPAttachments(
+              Cast<vk::AttachmentDescription>(createInfo.attachments))
+          .setSubpassCount(createInfo.subpassCount)
+          .setPSubpasses(Cast<vk::SubpassDescription>(createInfo.subpasses));
+
+  vk::RenderPass vkRenderPass;
+  if (device.createRenderPass(&renderPassCreateInfo, nullptr, &vkRenderPass) !=
+      vk::Result::eSuccess) {
+    return nullptr;
+  }
+  auto renderPass = std::make_unique<VulkanRenderPass>();
+  renderPass->setResource(vkRenderPass);
+  return renderPass;
+}
+
+std::unique_ptr<RHIPipelineLayout> VulkanRHI::createPipelineLayout(
+    const RHIPipelineLayoutCreateInfo& createInfo) {
+  auto pipelineLayoutCreateInfo =
+      vk::PipelineLayoutCreateInfo()
+          .setSetLayoutCount(createInfo.setLayoutCount)
+          .setPSetLayouts(Cast<vk::DescriptorSetLayout>(createInfo.setLayouts))
+          .setPushConstantRangeCount(createInfo.pushConstantRangeCount)
+          .setPPushConstantRanges(
+              Cast<vk::PushConstantRange>(createInfo.pushConstantRanges));
+
+  vk::PipelineLayout vkPipelineLayout;
+  if (device.createPipelineLayout(&pipelineLayoutCreateInfo, nullptr,
+                                  &vkPipelineLayout) != vk::Result::eSuccess) {
+    return nullptr;
+  }
+
+  auto pipelineLayout = std::make_unique<VulkanPipelineLayout>();
+  pipelineLayout->setResource(vkPipelineLayout);
+  return pipelineLayout;
 }
 
 bool VulkanRHI::checkValidationLayerSupport(

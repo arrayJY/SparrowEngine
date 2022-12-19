@@ -30,10 +30,19 @@ class VulkanRHI : public RHI {
   void createCommandBuffers();
   void createDescriptorPool();
   void createSyncPrimitives();
+#pragma endregion
+
+#pragma region Super
   void createSwapChain() override;
   void createSwapChainImageView() override;
   void createFramebufferImageAndView() override;
-  bool createGraphicsPipeline(const RHIGraphicsPipelineCreateInfo &createInfo) override;
+  bool createGraphicsPipeline(
+      const RHIGraphicsPipelineCreateInfo& createInfo) override;
+
+
+  std::unique_ptr<RHIRenderPass> createRenderPass(const RHIRenderPassCreateInfo& createInfo) override;
+  std::unique_ptr<RHIPipelineLayout> createPipelineLayout(const RHIPipelineLayoutCreateInfo& createInfo) override;
+
 #pragma endregion
 
 #pragma region Structs

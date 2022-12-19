@@ -19,7 +19,9 @@ class RHI {
   virtual void createFramebufferImageAndView() = 0;
   virtual bool createGraphicsPipeline(
       const RHIGraphicsPipelineCreateInfo& createInfo) = 0;
-
+  virtual std::unique_ptr<RHIRenderPass> createRenderPass(const RHIRenderPassCreateInfo& createInfo) = 0;
+  virtual std::unique_ptr<RHIPipelineLayout> createPipelineLayout(const RHIPipelineLayoutCreateInfo& createInfo) = 0;
+ 
   virtual ~RHI() = 0;
 };
 
