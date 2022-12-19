@@ -179,6 +179,15 @@ enum class RHIDependencyFlag : int {
 template <typename T, std::size_t Size>
 using RHIArray = std::array<T, Size>;
 
+#pragma region Classes
+
+class RHIPipeline {};
+class RHIShader {};
+class RHIPipelineLayout {};
+class RHIRenderPass {};
+
+#pragma endregion
+
 #pragma region Pipeline
 
 #pragma region PipelinePreviousDeclare
@@ -194,7 +203,6 @@ struct RHIColorBlendStateCreateInfo;
 struct RHIPipelineLayoutCreateInfo;
 struct RHIRenderPassCreateInfo;
 
-struct RHIShader;
 struct RHISpecializationInfo;
 struct RHISpecializationMapEntry;
 
@@ -217,9 +225,9 @@ struct RHIAttachmentDescription;
 struct RHISubpassDescription;
 struct RHISubpassDependency;
 struct RHIAttachmentReference;
+
 #pragma endregion
 
-struct RHIPipelineStateObject {};
 struct RHIGraphicsPipelineCreateInfo {
   uint32_t stageCount;
   const RHIPipelineShaderStageCreateInfo* shaderStageCreateInfo;
@@ -231,8 +239,11 @@ struct RHIGraphicsPipelineCreateInfo {
   const RHIMultisampleStateCreateInfo* multisampleStateCreateInfo;
   const RHIDepthStencilStateCreateInfo* depthStencilStateCreateInfo;
   const RHIColorBlendStateCreateInfo* colorBlendStateCreateInfo;
-  const RHIPipelineLayoutCreateInfo* pipelineLayoutCreateInfo;
-  const RHIRenderPassCreateInfo* renderPassCreateInfo;
+  RHIPipelineLayout* pipelineLayout;
+  RHIRenderPass* renderPass;
+  uint32_t subpass;
+  RHIPipeline* basePipelineHandle;
+  int32_t basePipelineIndex;
 };
 
 struct RHIPipelineShaderStageCreateInfo {
@@ -241,7 +252,6 @@ struct RHIPipelineShaderStageCreateInfo {
   const char* name = {};
   const RHISpecializationInfo* specializationInfo = {};
 };
-struct RHIShader {};
 struct RHISpecializationInfo {
   uint32_t mapEntryCount = {};
   const RHISpecializationMapEntry* pMapEntries = {};

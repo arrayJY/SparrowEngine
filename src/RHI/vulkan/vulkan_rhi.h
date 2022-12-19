@@ -33,7 +33,7 @@ class VulkanRHI : public RHI {
   void createSwapChain() override;
   void createSwapChainImageView() override;
   void createFramebufferImageAndView() override;
-  RHIPipelineStateObject createGraphicsPipeline(const RHIGraphicsPipelineCreateInfo &createInfo) override;
+  bool createGraphicsPipeline(const RHIGraphicsPipelineCreateInfo &createInfo) override;
 #pragma endregion
 
 #pragma region Structs
@@ -123,6 +123,10 @@ class VulkanRHI : public RHI {
 
   // Descriptor pool
   vk::DescriptorPool descriptorPool;
+
+  // pipeline
+  std::vector<vk::Pipeline> graphicsPipeline;
+  vk::PipelineCache graphicsPipelineCache;
 
 #pragma endregion
 

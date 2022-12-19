@@ -11,6 +11,7 @@
 #include <vector>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include "RHI/vulkan/vulkan_rhi_resource.h"
 #include "function/window_system.h"
 #include "vulkan_utils.h"
 
@@ -286,7 +287,7 @@ const T* Cast(U* value) {
   return reinterpret_cast<const T*>(value);
 }
 
-RHIPipelineStateObject VulkanRHI::createGraphicsPipeline(
+bool VulkanRHI::createGraphicsPipeline(
     const RHIGraphicsPipelineCreateInfo& createInfo) {
   const auto shaderStageCount = createInfo.stageCount;
   const auto& rhiShaderStages = createInfo.shaderStageCreateInfo;
@@ -298,8 +299,6 @@ RHIPipelineStateObject VulkanRHI::createGraphicsPipeline(
   const auto& rhiMultisampleState = createInfo.multisampleStateCreateInfo;
   const auto& rhiDepthStencilState = createInfo.depthStencilStateCreateInfo;
   const auto& rhiColorBlendState = createInfo.colorBlendStateCreateInfo;
-  const auto& rhiPipelineLayout = createInfo.pipelineLayoutCreateInfo;
-  const auto& rhiRenderPass = createInfo.renderPassCreateInfo;
 
   std::vector<vk::PipelineShaderStageCreateInfo> shaderStageCreateInfos(
       shaderStageCount);
@@ -396,26 +395,28 @@ RHIPipelineStateObject VulkanRHI::createGraphicsPipeline(
               rhiColorBlendState->attachments))
           .setBlendConstants(rhiColorBlendState->blendConstants);
 
-  auto pipelineLayoutCreateInfo =
-      vk::PipelineLayoutCreateInfo()
-          .setSetLayoutCount(rhiPipelineLayout->setLayoutCount)
-          .setPSetLayouts(
-              Cast<vk::DescriptorSetLayout>(rhiPipelineLayout->setLayouts))
-          .setPushConstantRangeCount(rhiPipelineLayout->pushConstantRangeCount)
-          .setPPushConstantRanges(Cast<vk::PushConstantRange>(
-              rhiPipelineLayout->pushConstantRanges));
+  /*
+    auto pipelineLayoutCreateInfo =
+        vk::PipelineLayoutCreateInfo()
+            .setSetLayoutCount(rhiPipelineLayout->setLayoutCount)
+            .setPSetLayouts(
+                Cast<vk::DescriptorSetLayout>(rhiPipelineLayout->setLayouts))
+            .setPushConstantRangeCount(rhiPipelineLayout->pushConstantRangeCount)
+            .setPPushConstantRanges(Cast<vk::PushConstantRange>(
+                rhiPipelineLayout->pushConstantRanges));
 
-  auto renderPassCreateInfo =
-      vk::RenderPassCreateInfo()
-          .setAttachmentCount(rhiRenderPass->attachmentCount)
-          .setPAttachments(
-              Cast<vk::AttachmentDescription>(rhiRenderPass->attachments))
-          .setSubpassCount(rhiRenderPass->subpassCount)
-          .setPSubpasses(
-              Cast<vk::SubpassDescription>(rhiRenderPass->subpasses));
+    auto renderPassCreateInfo =
+        vk::RenderPassCreateInfo()
+            .setAttachmentCount(rhiRenderPass->attachmentCount)
+            .setPAttachments(
+                Cast<vk::AttachmentDescription>(rhiRenderPass->attachments))
+            .setSubpassCount(rhiRenderPass->subpassCount)
+            .setPSubpasses(
+                Cast<vk::SubpassDescription>(rhiRenderPass->subpasses));
 
-  auto pipelineLayout = device.createPipelineLayout(pipelineLayoutCreateInfo);
-  auto renderPass = device.createRenderPass(renderPassCreateInfo);
+    auto pipelineLayout = device.createPipelineLayout(pipelineLayoutCreateInfo);
+    auto renderPass = device.createRenderPass(renderPassCreateInfo);
+    */
 
   auto graphicsPipelineCreateInfo =
       vk::GraphicsPipelineCreateInfo()
@@ -429,13 +430,24 @@ RHIPipelineStateObject VulkanRHI::createGraphicsPipeline(
           .setPDepthStencilState(&depthStencilStateCreateInfo)
           .setPColorBlendState(&colorBlendStateCreateInfo)
           .setPDynamicState(&dynamicStateCreateInfo)
-          .setLayout(pipelineLayout)
-          .setRenderPass(renderPass)
-          .setSubpass(0)
-          .setBasePipelineHandle(nullptr)
-          .setBasePipelineIndex(-1);
+          .setLayout(Cast<VulkanPipelineLayout>(createInfo.pipelineLayout)
+                         ->getResource())
+          .setRenderPass(
+              Cast<VulkanRenderPass>(createInfo.renderPass)->getResource())
+          .setSubpass(createInfo.subpass)
+          .setBasePipelineHandle(
+              Cast<VulkanPipeline>(createInfo.basePipelineHandle)
+                  ->getResource())
+          .setBasePipelineIndex(createInfo.basePipelineIndex);
 
-  return {};
+  if (auto pipelineCreateResult = device.createGraphicsPipelines(
+          graphicsPipelineCache, graphicsPipelineCreateInfo);
+      pipelineCreateResult.result == vk::Result::eSuccess) {
+    graphicsPipeline = pipelineCreateResult.value;
+    return true;
+  }
+
+  return false;
 }
 
 bool VulkanRHI::checkValidationLayerSupport(
