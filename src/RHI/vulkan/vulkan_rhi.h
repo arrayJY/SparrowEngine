@@ -44,6 +44,8 @@ class VulkanRHI : public RHI {
   std::unique_ptr<RHIPipelineLayout> createPipelineLayout(
       const RHIPipelineLayoutCreateInfo& createInfo) override;
 
+RHISwapChainInfo getSwapChainInfo() override;
+
   void submitRendering() override;
 #pragma endregion
 

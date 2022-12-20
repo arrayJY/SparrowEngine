@@ -5,6 +5,8 @@
 #define SPARROWENGINE_RENDER_SYSTEM_H
 
 #include <memory>
+#include <vector>
+#include <string>
 
 namespace Sparrow {
 class WindowSystem;
@@ -21,6 +23,7 @@ class RenderSystem {
   void tick(float deltaTime);
 
  private:
+  static std::vector<uint32_t> readFile(const std::string& filename);
   std::shared_ptr<RHI> rhi;
 };
 

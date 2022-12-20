@@ -53,12 +53,52 @@ enum class RHIFormat : int {
 };
 
 enum class RHIDynamicState {
+  Viewport = 0,
+  Scissor = 1,
+  LineWidth = 2,
+  DepthBias = 3,
+  BlendConstants = 4,
+  DepthBounds = 5,
+  StencilCompareMask = 6,
+  StencilWriteMask = 7,
+  StencilReference = 8,
+  CullMode = 1000267000,
+  FrontFace = 1000267001,
+  PrimitiveTopology = 1000267002,
+  ViewportWithCount = 1000267003,
+  ScissorWithCount = 1000267004,
+  VertexInputBindingStride = 1000267005,
+  DepthTestEnable = 1000267006,
+  DepthWriteEnable = 1000267007,
+  DepthCompareOp = 1000267008,
+  DepthBoundsTestEnable = 1000267009,
+  StencilTestEnable = 1000267010,
+  StencilOp = 1000267011,
+  RasterizerDiscardEnable = 1000377001,
+  DepthBiasEnable = 1000377002,
+  PrimitiveRestartEnable = 1000377004,
+  ViewportWScalingNV = 1000087000,
+  DiscardRectangleEXT = 1000099000,
+  SampleLocationsEXT = 1000143000,
+  RayTracingPipelineStackSizeKHR = 1000347000,
+  ViewportShadingRatePaletteNV = 1000164004,
+  ViewportCoarseSampleOrderNV = 1000164006,
+  ExclusiveScissorNV = 1000205001,
   // TODO
-
 };
-enum class RHIPrimitiveTopology {
-  // TODO
 
+enum class RHIPrimitiveTopology {
+  PointList = 0,
+  LineList = 1,
+  LineStrip = 2,
+  TriangleList = 3,
+  TriangleStrip = 4,
+  TriangleFan = 5,
+  LineListWithAdjacency = 6,
+  LineStripWithAdjacency = 7,
+  TriangleListWithAdjacency = 8,
+  TriangleStripWithAdjacency = 9,
+  PatchList = 10,
 };
 
 enum class RHIPolygonMode {
@@ -77,6 +117,45 @@ enum class RHICullMode {
   Front = 1,
   Back = 2,
   FrontAndBack = 3,
+};
+
+enum class RHIAttachmentDescriptionFlag : int { MayAlias = 0x00000001 };
+enum class RHIBlendFactor {
+  Zero = 0,
+  One = 1,
+  SrcColor = 2,
+  OneMinusSrcColor = 3,
+  DstColor = 4,
+  OneMinusDstColor = 5,
+  SrcAlpha = 6,
+  OneMinusSrcAlpha = 7,
+  DstAlpha = 8,
+  OneMinusDstAlpha = 9,
+  ConstantColor = 10,
+  OneMinusConstantColor = 11,
+  ConstantAlpha = 12,
+  OneMinusConstantAlpha = 13,
+  SrcAlphaSaturate = 14,
+  Src1Color = 15,
+  OneMinusSrc1Color = 16,
+  Src1Alpha = 17,
+  OneMinusSrc1Alpha = 18,
+};
+enum class RHIBlendOp {
+  Add = 0,
+  Subtract = 1,
+  ReverseSubtract = 2,
+  Min = 3,
+  Max = 4,
+  // TODO
+};
+enum class RHIColorComponentFlag : int {
+  R = 0x00000001,
+  G = 0x00000002,
+  B = 0x00000004,
+  A = 0x00000008,
+  AllBits = RHIColorComponentFlag::R | RHIColorComponentFlag::G |
+            RHIColorComponentFlag::B | RHIColorComponentFlag::A,
 };
 
 enum class RHISampleCount : int {
@@ -145,9 +224,42 @@ enum class RHIAttachmentStoreOp {
   NoneKHR = RHIAttachmentStoreOp::None,
   NoneQCOM = RHIAttachmentStoreOp::None,
 };
+enum class RHISubpassDescriptionFlag : int {
+  PerViewAttributesNVX = 0x00000001,
+  PerViewPositionXOnlyNVX = 0x00000002,
+  FragmentRegionQCOM = 0x00000004,
+  ShaderResolveQCOM = 0x00000008,
+  RasterizationOrderAttachmentColorAccessEXT = 0x00000010,
+  RasterizationOrderAttachmentDepthAccessEXT = 0x00000020,
+  RasterizationOrderAttachmentStencilAccessEXT = 0x00000040,
+  EnableLegacyDitheringEXT = 0x00000080,
+  RasterizationOrderAttachmentColorAccessARM =
+      RHISubpassDescriptionFlag::RasterizationOrderAttachmentColorAccessEXT,
+  RasterizationOrderAttachmentDepthAccessARM =
+      RHISubpassDescriptionFlag::RasterizationOrderAttachmentDepthAccessEXT,
+  RasterizationOrderAttachmentStencilAccessARM =
+      RHISubpassDescriptionFlag::RasterizationOrderAttachmentStencilAccessEXT,
+};
 
 enum class RHIImageLayout {
   Undefined = 0,
+  General = 1,
+  ColorAttachmentOptimal = 2,
+  DepthStencilAttachmentOptimal = 3,
+  DepthStencilReadOnlyOptimal = 4,
+  ShaderReadOnlyOptimal = 5,
+  TransferSrcOptimal = 6,
+  TransferDstOptimal = 7,
+  Preinitialized = 8,
+  DepthReadOnlyStencilAttachmentOptimal = 1000117000,
+  DepthAttachmentStencilReadOnlyOptimal = 1000117001,
+  DepthAttachmentOptimal = 1000241000,
+  DepthReadOnlyOptimal = 1000241001,
+  StencilAttachmentOptimal = 1000241002,
+  StencilReadOnlyOptimal = 1000241003,
+  ReadOnlyOptimal = 1000314000,
+  AttachmentOptimal = 1000314001,
+  PresentSrcKHR = 1000001002,
   // TODO
 };
 
@@ -206,8 +318,8 @@ struct RHIRenderPassCreateInfo;
 struct RHISpecializationInfo;
 struct RHISpecializationMapEntry;
 
-struct RHIVertexBindingDescriptions;
-struct RHIVertexAttributeDescriptions;
+struct RHIVertexBindingDescription;
+struct RHIVertexAttributeDescription;
 
 struct RHIViewport;
 struct RHIOffset2D;
@@ -270,16 +382,16 @@ struct RHIDynamicStateCreateInfo {
 };
 struct RHIVertexInputStateCreateInfo {
   uint32_t vertexBindingDescriptionCount;
-  const RHIVertexBindingDescriptions* vertexBindingDescriptions;
+  const RHIVertexBindingDescription* vertexBindingDescriptions;
   uint32_t vertexAttributeDescriptionCount;
-  const RHIVertexAttributeDescriptions* vertexAttributeDescriptions;
+  const RHIVertexAttributeDescription* vertexAttributeDescriptions;
 };
-struct RHIVertexBindingDescriptions {
+struct RHIVertexBindingDescription {
   uint32_t binding = {};
   uint32_t stride = {};
   RHIVertexInputRate inputRate = RHIVertexInputRate::Vertex;
 };
-struct RHIVertexAttributeDescriptions {
+struct RHIVertexAttributeDescription {
   uint32_t location = {};
   uint32_t binding = {};
   RHIFormat format = RHIFormat::Undefined;
@@ -369,6 +481,16 @@ struct RHIColorBlendStateCreateInfo {
   const RHIColorBlendAttachmentState* attachments = {};
   RHIArray<float, 4> blendConstants = {};
 };
+struct RHIColorBlendAttachmentState {
+  RHIBool32 blendEnable = {};
+  RHIBlendFactor srcColorBlendFactor = RHIBlendFactor::Zero;
+  RHIBlendFactor dstColorBlendFactor = RHIBlendFactor::Zero;
+  RHIBlendOp colorBlendOp = RHIBlendOp::Add;
+  RHIBlendFactor srcAlphaBlendFactor = RHIBlendFactor::Zero;
+  RHIBlendFactor dstAlphaBlendFactor = RHIBlendFactor::Zero;
+  RHIBlendOp alphaBlendOp = RHIBlendOp::Add;
+  RHIColorComponentFlag colorWriteMask = {};
+};
 
 struct RHIPipelineLayoutCreateInfo {
   uint32_t setLayoutCount = {};
@@ -393,6 +515,7 @@ struct RHIRenderPassCreateInfo {
 };
 
 struct RHIAttachmentDescription {
+  RHIAttachmentDescriptionFlag flag = {};
   RHIFormat format = RHIFormat::Undefined;
   RHISampleCount samples = RHISampleCount::Count1;
   RHIAttachmentLoadOp loadOp = RHIAttachmentLoadOp::Load;
@@ -404,6 +527,7 @@ struct RHIAttachmentDescription {
 };
 
 struct RHISubpassDescription {
+  RHISubpassDescriptionFlag flags = {};
   RHIPipelineBindPoint pipelineBindPoint = RHIPipelineBindPoint::Graphics;
   uint32_t inputAttachmentCount = {};
   const RHIAttachmentReference* inputAttachments = {};
@@ -431,6 +555,11 @@ struct RHIAttachmentReference {
 };
 
 #pragma endregion
+
+struct RHISwapChainInfo {
+  RHIExtend2D extent;
+  RHIFormat imageFormat;
+};
 
 }  // namespace Sparrow
 

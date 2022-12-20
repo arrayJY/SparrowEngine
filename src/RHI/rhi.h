@@ -18,13 +18,18 @@ class RHI {
   virtual void createSwapChain() = 0;
   virtual void createSwapChainImageView() = 0;
   virtual void createFramebufferImageAndView() = 0;
-  virtual std::unique_ptr<RHIShader> createShaderModule(std::span<uint32_t> shader_code) = 0;
+  virtual std::unique_ptr<RHIShader> createShaderModule(
+      std::span<uint32_t> shader_code) = 0;
   virtual bool createGraphicsPipeline(
       const RHIGraphicsPipelineCreateInfo& createInfo) = 0;
   virtual std::unique_ptr<RHIRenderPass> createRenderPass(
       const RHIRenderPassCreateInfo& createInfo) = 0;
   virtual std::unique_ptr<RHIPipelineLayout> createPipelineLayout(
       const RHIPipelineLayoutCreateInfo& createInfo) = 0;
+#pragma endregion
+
+#pragma region Query
+  virtual RHISwapChainInfo getSwapChainInfo() = 0;
 #pragma endregion
 
 #pragma region Command

@@ -394,18 +394,21 @@ bool VulkanRHI::createGraphicsPipeline(
           .setAlphaToCoverageEnable(rhiMultisampleState->alphaToCoverageEnable)
           .setAlphaToOneEnable(rhiMultisampleState->alphaToOneEnable);
 
-  auto depthStencilStateCreateInfo =
-      vk::PipelineDepthStencilStateCreateInfo()
-          .setDepthTestEnable(rhiDepthStencilState->depthTestEnable)
-          .setDepthWriteEnable(rhiDepthStencilState->depthWriteEnable)
-          .setDepthCompareOp(
-              Cast<vk::CompareOp>(rhiDepthStencilState->depthCompareOp))
-          .setDepthBoundsTestEnable(rhiDepthStencilState->depthBoundsTestEnable)
-          .setStencilTestEnable(rhiDepthStencilState->stencilTestEnable)
-          .setFront(Cast<vk::StencilOpState>(rhiDepthStencilState->front))
-          .setBack(Cast<vk::StencilOpState>(rhiDepthStencilState->back))
-          .setMinDepthBounds(rhiDepthStencilState->minDepthBounds)
-          .setMaxDepthBounds(rhiDepthStencilState->maxDepthBounds);
+  auto depthStencilStateCreateInfo = vk::PipelineDepthStencilStateCreateInfo();
+
+  if (rhiDepthStencilState) {
+    depthStencilStateCreateInfo
+        .setDepthTestEnable(rhiDepthStencilState->depthTestEnable)
+        .setDepthWriteEnable(rhiDepthStencilState->depthWriteEnable)
+        .setDepthCompareOp(
+            Cast<vk::CompareOp>(rhiDepthStencilState->depthCompareOp))
+        .setDepthBoundsTestEnable(rhiDepthStencilState->depthBoundsTestEnable)
+        .setStencilTestEnable(rhiDepthStencilState->stencilTestEnable)
+        .setFront(Cast<vk::StencilOpState>(rhiDepthStencilState->front))
+        .setBack(Cast<vk::StencilOpState>(rhiDepthStencilState->back))
+        .setMinDepthBounds(rhiDepthStencilState->minDepthBounds)
+        .setMaxDepthBounds(rhiDepthStencilState->maxDepthBounds);
+  }
 
   auto colorBlendStateCreateInfo =
       vk::PipelineColorBlendStateCreateInfo()
@@ -425,7 +428,8 @@ bool VulkanRHI::createGraphicsPipeline(
           .setPViewportState(&viewportStateCreateInfo)
           .setPRasterizationState(&rasterizationStateCreateInfo)
           .setPMultisampleState(&multisampleStateCreateInfo)
-          .setPDepthStencilState(&depthStencilStateCreateInfo)
+          .setPDepthStencilState(
+              rhiDepthStencilState ? &depthStencilStateCreateInfo : nullptr)
           .setPColorBlendState(&colorBlendStateCreateInfo)
           .setPDynamicState(&dynamicStateCreateInfo)
           .setLayout(
@@ -435,8 +439,10 @@ bool VulkanRHI::createGraphicsPipeline(
                              ->getResource())
           .setSubpass(createInfo.subpass)
           .setBasePipelineHandle(
-              CastResource<VulkanPipeline>(createInfo.basePipelineHandle)
-                  ->getResource())
+              createInfo.basePipelineHandle
+                  ? CastResource<VulkanPipeline>(createInfo.basePipelineHandle)
+                        ->getResource()
+                  : nullptr)
           .setBasePipelineIndex(createInfo.basePipelineIndex);
 
   if (auto pipelineCreateResult = device.createGraphicsPipelines(
@@ -488,6 +494,16 @@ std::unique_ptr<RHIPipelineLayout> VulkanRHI::createPipelineLayout(
   auto pipelineLayout = std::make_unique<VulkanPipelineLayout>();
   pipelineLayout->setResource(vkPipelineLayout);
   return pipelineLayout;
+}
+
+RHISwapChainInfo VulkanRHI::getSwapChainInfo() {
+  return RHISwapChainInfo{
+      .extent =
+          {
+              .width = swapChainExtent.width,
+              .height = swapChainExtent.height,
+          },
+      .imageFormat = static_cast<RHIFormat>(swapChainImageFormat.format)};
 }
 
 void VulkanRHI::submitRendering() {
@@ -588,7 +604,6 @@ VulkanRHI::QueueFamilyIndices VulkanRHI::findQueueFamilies(
       queueFamilyIndices.presentFamily = i;
     }
   }
-
   return queueFamilyIndices;
 }
 
