@@ -37,7 +37,6 @@ void VulkanRHI::initialize(const RHIInitInfo& initInfo) {
   createSyncPrimitives();
   createSwapChain();
   createSwapChainImageView();
-  createFramebuffers();
   createFramebufferImageAndView();
 }
 
@@ -190,9 +189,6 @@ void VulkanRHI::createSyncPrimitives() {
   }
 }
 
-void VulkanRHI::createFramebuffers() {
-}
-
 void VulkanRHI::createSwapChain() {
   auto swapChainSupport = querySwapChainSupport(gpu);
   auto& capabilities = swapChainSupport.capabilities;
@@ -259,6 +255,46 @@ void VulkanRHI::createSwapChainImageView() {
     swapChainImagesViews[i] = device.createImageView(createImageViewInfo);
   }
 }
+template <typename T, typename U>
+  requires std::is_enum_v<T>
+T Cast(U value) {
+  return static_cast<T>(value);
+}
+template <typename T, typename U>
+  requires std::is_class_v<T>
+T Cast(U value) {
+  return *reinterpret_cast<T*>(&value);
+}
+
+template <typename R, typename T>
+R* CastResource(T* value) {
+  return static_cast<R*>(value);
+}
+
+template <typename T, typename U>
+const T* Cast(U* value) {
+  return reinterpret_cast<const T*>(value);
+}
+
+std::unique_ptr<RHIFramebuffer> VulkanRHI::createFramebuffer(
+    RHIFramebufferCreateInfo* createInfo) {
+  auto frameBufferCreateInfo =
+      vk::FramebufferCreateInfo()
+          .setRenderPass(CastResource<VulkanRenderPass>(createInfo->renderPass)
+                             ->getResource())
+          .setAttachments(swapChainImagesViews)
+          .setWidth(createInfo->width)
+          .setHeight(createInfo->height)
+          .setLayers(createInfo->layers);
+  vk::Framebuffer vkFramebuffer;
+  if (device.createFramebuffer(&frameBufferCreateInfo, nullptr,
+                               &vkFramebuffer) != vk::Result::eSuccess) {
+    return nullptr;
+  }
+  auto framebuffer = std::make_unique<VulkanFramebuffer>();
+  framebuffer->setResource(vkFramebuffer);
+  return framebuffer;
+}
 
 void VulkanRHI::createFramebufferImageAndView() {
   VulkanUtils::createImage(gpu, device, swapChainExtent.width,
@@ -290,27 +326,6 @@ std::unique_ptr<RHIShader> VulkanRHI::createShaderModule(
   auto vulkanShader = std::make_unique<VulkanShader>();
   vulkanShader->setResource(vkShaderModule);
   return vulkanShader;
-}
-
-template <typename T, typename U>
-  requires std::is_enum_v<T>
-T Cast(U value) {
-  return static_cast<T>(value);
-}
-template <typename T, typename U>
-  requires std::is_class_v<T>
-T Cast(U value) {
-  return *reinterpret_cast<T*>(&value);
-}
-
-template <typename R, typename T>
-R* CastResource(T* value) {
-  return static_cast<R*>(value);
-}
-
-template <typename T, typename U>
-const T* Cast(U* value) {
-  return reinterpret_cast<const T*>(value);
 }
 
 bool VulkanRHI::createGraphicsPipeline(
@@ -550,8 +565,6 @@ void VulkanRHI::cmdBeginRenderPass(RHICommandBuffer* commandBuffer,
                                    RHISubpassContents contents) {
   auto& vkCommandBuffer =
       commandBuffers[currentFrameIndex];  // TODO: use outer resource.
-  auto& framebuffer =
-      framebuffers[currentFrameIndex];  // TODO: use outer resource.
 
   auto renderPassBeginInfo = vk::RenderPassBeginInfo();
 
@@ -559,7 +572,8 @@ void VulkanRHI::cmdBeginRenderPass(RHICommandBuffer* commandBuffer,
     renderPassBeginInfo
         .setRenderPass(CastResource<VulkanRenderPass>(beginInfo->renderPass)
                            ->getResource())
-        .setFramebuffer(framebuffer)
+        .setFramebuffer(CastResource<VulkanFramebuffer>(beginInfo->frameBuffer)
+                            ->getResource())
         .setRenderArea(Cast<vk::Rect2D>(beginInfo->renderArea))
         .setClearValueCount(beginInfo->clearValueCount)
         .setPClearValues(Cast<vk::ClearValue>(beginInfo->clearValue));

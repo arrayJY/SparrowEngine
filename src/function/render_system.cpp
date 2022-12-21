@@ -142,6 +142,17 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   auto renderPass = rhi->createRenderPass(renderPassCreateInfo);
   auto piplineLayout = rhi->createPipelineLayout(pipelineLayoutCreateInfo);
 
+  auto framebufferCreateInfo = RHIFramebufferCreateInfo{
+      .renderPass = renderPass.get(),
+      .attachmentCount = 0,
+      .attachments = nullptr,
+      .width = swapChainInfo.extent.width,
+      .height = swapChainInfo.extent.height,
+      .layers = 1,
+  };
+
+  auto framebuffer = rhi->createFramebuffer(&framebufferCreateInfo);
+
   auto grpahicPipelineCreateInfo = RHIGraphicsPipelineCreateInfo{
       .stageCount = 2,
       .shaderStageCreateInfo = shaderStages,
@@ -167,7 +178,7 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   RHIClearValue clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
   auto renderPassBeginInfo =
       RHIRenderPassBeginInfo{.renderPass = renderPass.get(),
-                             .frameBuffer = nullptr,
+                             .frameBuffer = framebuffer.get(),
                              .renderArea =
                                  {
                                      .offset = {0, 0},

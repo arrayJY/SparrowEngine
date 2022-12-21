@@ -30,12 +30,12 @@ class VulkanRHI : public RHI {
   void createCommandBuffers();
   void createDescriptorPool();
   void createSyncPrimitives();
-  void createFramebuffers();
 #pragma endregion
 
 #pragma region Super
   void createSwapChain() override;
   void createSwapChainImageView() override;
+  std::unique_ptr<RHIFramebuffer> createFramebuffer(RHIFramebufferCreateInfo *createInfo) override;
   void createFramebufferImageAndView() override;
   std::unique_ptr<RHIShader> createShaderModule(
       std::span<char> shader_code) override;

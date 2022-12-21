@@ -330,6 +330,7 @@ class RHIPipelineLayout {};
 class RHIRenderPass {};
 class RHIFramebuffer {};
 class RHICommandBuffer {};
+class RHIImageView {};
 
 #pragma endregion
 
@@ -627,6 +628,15 @@ struct RHIRenderPassBeginInfo {
   RHIRect2D renderArea;
   uint32_t clearValueCount;
   const RHIClearValue* clearValue;
+};
+
+struct RHIFramebufferCreateInfo {
+  RHIRenderPass* renderPass;
+  uint32_t attachmentCount;
+  RHIImageView* const* attachments;
+  uint32_t width;
+  uint32_t height;
+  uint32_t layers;
 };
 
 }  // namespace Sparrow
