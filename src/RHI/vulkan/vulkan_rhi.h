@@ -30,13 +30,15 @@ class VulkanRHI : public RHI {
   void createCommandBuffers();
   void createDescriptorPool();
   void createSyncPrimitives();
+  void createFramebuffers();
 #pragma endregion
 
 #pragma region Super
   void createSwapChain() override;
   void createSwapChainImageView() override;
   void createFramebufferImageAndView() override;
-  std::unique_ptr<RHIShader> createShaderModule(std::span<char> shader_code) override;
+  std::unique_ptr<RHIShader> createShaderModule(
+      std::span<char> shader_code) override;
   bool createGraphicsPipeline(
       const RHIGraphicsPipelineCreateInfo& createInfo) override;
   std::unique_ptr<RHIRenderPass> createRenderPass(
@@ -44,7 +46,32 @@ class VulkanRHI : public RHI {
   std::unique_ptr<RHIPipelineLayout> createPipelineLayout(
       const RHIPipelineLayoutCreateInfo& createInfo) override;
 
-RHISwapChainInfo getSwapChainInfo() override;
+  RHISwapChainInfo getSwapChainInfo() override;
+  bool beginCommandBuffer(
+      RHICommandBuffer* commandBuffer,
+      RHICommandBufferBeginInfo* commandBufferBeginInfo) override;
+  bool endCommandBuffer(RHICommandBuffer* commandBuffer) override;
+
+  void cmdBeginRenderPass(RHICommandBuffer* commandBuffer,
+                          RHIRenderPassBeginInfo* beginInfo,
+                          RHISubpassContents contents) override;
+  void cmdEndRenderPass(RHICommandBuffer* commandBuffer) override;
+  void cmdBindPipeline(RHICommandBuffer* commandBuffer,
+                       RHIPipelineBindPoint bindPoint,
+                       RHIPipeline* pipeline) override;
+  void cmdDraw(RHICommandBuffer* commandBuffer,
+               uint32_t vertexCount,
+               uint32_t instanceCount,
+               uint32_t firstVertex,
+               uint32_t firstInstance) override;
+  void cmdSetViewport(RHICommandBuffer* commandBuffer,
+                      uint32_t firstViewport,
+                      uint32_t viewportCount,
+                      const RHIViewport* pViewports) override;
+  void cmdSetScissor(RHICommandBuffer* commandBuffer,
+                     uint32_t firstScissor,
+                     uint32_t scissorCount,
+                     const RHIRect2D* pScissors) override;
 
   void submitRendering() override;
 #pragma endregion
@@ -140,7 +167,8 @@ RHISwapChainInfo getSwapChainInfo() override;
   vk::DescriptorPool descriptorPool;
 
   // pipeline
-  std::vector<vk::Pipeline> graphicsPipeline;
+  // std::vector<vk::Pipeline> graphicsPipeline;
+  vk::Pipeline graphicsPipeline;
   vk::PipelineCache graphicsPipelineCache;
 
 #pragma endregion

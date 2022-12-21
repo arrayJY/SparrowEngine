@@ -288,6 +288,37 @@ enum class RHIDependencyFlag : int {
   ViewLocalKHR = RHIDependencyFlag::ViewLocal,
 };
 
+enum class RHICommandBufferUsageFlag : int {
+  OneTimeSubmit = 0x00000001,
+  RenderPassContinue = 0x00000002,
+  SimultaneousUse = 0x00000004,
+};
+enum class RHIQueryControlFlag : int { Precise = 0x00000001 };
+enum class RHIQueryPipelineStatisticFlag : int {
+  InputAssemblyVertices = 0x00000001,
+  InputAssemblyPrimitives = 0x00000002,
+  VertexShaderInvocations = 0x00000004,
+  GeometryShaderInvocations = 0x00000008,
+  GeometryShaderPrimitives = 0x00000010,
+  ClippingInvocations = 0x00000020,
+  ClippingPrimitives = 0x00000040,
+  FragmentShaderInvocations = 0x00000080,
+  TessellationControlShaderPatches = 0x00000100,
+  TessellationEvaluationShaderInvocations = 0x00000200,
+  ComputeShaderInvocations = 0x00000400,
+  TaskShaderInvocationsEXT = 0x00000800,
+  MeshShaderInvocationsEXT = 0x00001000,
+};
+
+enum class RHISubpassContents {
+  Inline = 0,
+  SecondaryCommandBuffers = 1,
+};
+
+#pragma region Command
+struct RHICommandBufferInheritanceInfo;
+#pragma endregion
+
 template <typename T, std::size_t Size>
 using RHIArray = std::array<T, Size>;
 
@@ -297,6 +328,8 @@ class RHIPipeline {};
 class RHIShader {};
 class RHIPipelineLayout {};
 class RHIRenderPass {};
+class RHIFramebuffer {};
+class RHICommandBuffer {};
 
 #pragma endregion
 
@@ -559,6 +592,41 @@ struct RHIAttachmentReference {
 struct RHISwapChainInfo {
   RHIExtend2D extent;
   RHIFormat imageFormat;
+};
+
+struct RHICommandBufferBeginInfo {
+  RHICommandBufferUsageFlag flags;
+  RHICommandBufferInheritanceInfo* inheritanceInfo;
+};
+
+struct RHICommandBufferInheritanceInfo {
+  RHIRenderPass renderPass = {};
+  uint32_t subpass = {};
+  RHIFramebuffer framebuffer = {};
+  RHIBool32 occlusionQueryEnable = {};
+  RHIQueryControlFlag queryFlags = {};
+  RHIQueryPipelineStatisticFlag pipelineStatistics = {};
+};
+
+struct RHIClearDepthStencilValue {
+  float depth = {};
+  uint32_t stencil = {};
+};
+union RHIClearColorValue {
+  float float32[4];
+  int32_t int32[4];
+  uint32_t uint32[4];
+};
+union RHIClearValue {
+  RHIClearColorValue color;
+  RHIClearDepthStencilValue depthStencil;
+};
+struct RHIRenderPassBeginInfo {
+  RHIRenderPass* renderPass;
+  RHIFramebuffer* frameBuffer;
+  RHIRect2D renderArea;
+  uint32_t clearValueCount;
+  const RHIClearValue* clearValue;
 };
 
 }  // namespace Sparrow

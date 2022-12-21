@@ -37,6 +37,7 @@ void VulkanRHI::initialize(const RHIInitInfo& initInfo) {
   createSyncPrimitives();
   createSwapChain();
   createSwapChainImageView();
+  createFramebuffers();
   createFramebufferImageAndView();
 }
 
@@ -187,6 +188,9 @@ void VulkanRHI::createSyncPrimitives() {
         device.createSemaphore(semaphoreInfo);
     isFrameInFlightFences[i] = device.createFence(fenceInfo);
   }
+}
+
+void VulkanRHI::createFramebuffers() {
 }
 
 void VulkanRHI::createSwapChain() {
@@ -447,10 +451,11 @@ bool VulkanRHI::createGraphicsPipeline(
                   : nullptr)
           .setBasePipelineIndex(createInfo.basePipelineIndex);
 
-  if (auto pipelineCreateResult = device.createGraphicsPipelines(
-          graphicsPipelineCache, graphicsPipelineCreateInfo);
-      pipelineCreateResult.result == vk::Result::eSuccess) {
-    graphicsPipeline = pipelineCreateResult.value;
+  if (auto pipelineCreateResult =
+          device.createGraphicsPipelines(
+              graphicsPipelineCache, 1, &graphicsPipelineCreateInfo, nullptr,
+              &graphicsPipeline) == vk::Result::eSuccess) {
+    // graphicsPipeline = pipelineCreateResult.value;
     return true;
   }
 
@@ -506,6 +511,111 @@ RHISwapChainInfo VulkanRHI::getSwapChainInfo() {
               .height = swapChainExtent.height,
           },
       .imageFormat = static_cast<RHIFormat>(swapChainImageFormat.format)};
+}
+
+bool VulkanRHI::beginCommandBuffer(
+    RHICommandBuffer* commandBuffer,
+    RHICommandBufferBeginInfo* commandBufferBeginInfo) {
+  auto beginInfo = vk::CommandBufferBeginInfo();
+  if (commandBufferBeginInfo) {
+    beginInfo
+        .setFlags(
+            Cast<vk::CommandBufferUsageFlags>(commandBufferBeginInfo->flags))
+        .setPInheritanceInfo(Cast<vk::CommandBufferInheritanceInfo>(
+            commandBufferBeginInfo->inheritanceInfo));
+  }
+  auto& vkCommandBuffer =
+      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  if (vkCommandBuffer.begin(&beginInfo) != vk::Result::eSuccess) {
+    std::cerr << "BeginCommandBuffer failed.";
+    return false;
+  }
+  return true;
+}
+
+bool VulkanRHI::endCommandBuffer(RHICommandBuffer* commandBuffer) {
+  auto& vkCommandBuffer =
+      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  try {
+    vkCommandBuffer.end();
+  } catch (std::runtime_error e) {
+    std::cerr << "EndCommandBuffer failed.";
+    return false;
+  }
+  return true;
+}
+
+void VulkanRHI::cmdBeginRenderPass(RHICommandBuffer* commandBuffer,
+                                   RHIRenderPassBeginInfo* beginInfo,
+                                   RHISubpassContents contents) {
+  auto& vkCommandBuffer =
+      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  auto& framebuffer =
+      framebuffers[currentFrameIndex];  // TODO: use outer resource.
+
+  auto renderPassBeginInfo = vk::RenderPassBeginInfo();
+
+  if (beginInfo) {
+    renderPassBeginInfo
+        .setRenderPass(CastResource<VulkanRenderPass>(beginInfo->renderPass)
+                           ->getResource())
+        .setFramebuffer(framebuffer)
+        .setRenderArea(Cast<vk::Rect2D>(beginInfo->renderArea))
+        .setClearValueCount(beginInfo->clearValueCount)
+        .setPClearValues(Cast<vk::ClearValue>(beginInfo->clearValue));
+  }
+
+  vkCommandBuffer.beginRenderPass(renderPassBeginInfo,
+                                  Cast<vk::SubpassContents>(contents));
+}
+
+void VulkanRHI::cmdEndRenderPass(RHICommandBuffer* commandBuffer) {
+  auto& vkCommandBuffer =
+      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  vkCommandBuffer.endRenderPass();
+}
+
+void VulkanRHI::cmdBindPipeline(RHICommandBuffer* commandBuffer,
+                                RHIPipelineBindPoint bindPoint,
+                                RHIPipeline* pipeline) {
+  auto& vkCommandBuffer =
+      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+
+  vkCommandBuffer.bindPipeline(
+      Cast<vk::PipelineBindPoint>(bindPoint),
+      // CastResource<VulkanPipeline>(pipeline)->getResource());
+      graphicsPipeline);
+}
+
+void VulkanRHI::cmdDraw(RHICommandBuffer* commandBuffer,
+                        uint32_t vertexCount,
+                        uint32_t instanceCount,
+                        uint32_t firstVertex,
+                        uint32_t firstInstance) {
+  auto& vkCommandBuffer =
+      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  vkCommandBuffer.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+}
+
+void VulkanRHI::cmdSetViewport(RHICommandBuffer* commandBuffer,
+                               uint32_t firstViewport,
+                               uint32_t viewportCount,
+                               const RHIViewport* pViewports) {
+  auto& vkCommandBuffer =
+      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+
+  vkCommandBuffer.setViewport(firstViewport, viewportCount,
+                              Cast<vk::Viewport>(pViewports));
+}
+
+void VulkanRHI::cmdSetScissor(RHICommandBuffer* commandBuffer,
+                              uint32_t firstScissor,
+                              uint32_t scissorCount,
+                              const RHIRect2D* pScissors) {
+  auto& vkCommandBuffer =
+      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  vkCommandBuffer.setScissor(firstScissor, scissorCount,
+                             Cast<vk::Rect2D>(pScissors));
 }
 
 void VulkanRHI::submitRendering() {

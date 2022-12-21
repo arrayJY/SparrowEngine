@@ -3,9 +3,9 @@
 //
 
 #include "render_system.h"
-#include <iostream>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
+#include <iostream>
 #include "RHI/vulkan/vulkan_rhi.h"
 #include "function/window_system.h"
 
@@ -161,6 +161,31 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   };
 
   rhi->createGraphicsPipeline(grpahicPipelineCreateInfo);
+
+  rhi->beginCommandBuffer(nullptr, nullptr);
+
+  RHIClearValue clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+  auto renderPassBeginInfo =
+      RHIRenderPassBeginInfo{.renderPass = renderPass.get(),
+                             .frameBuffer = nullptr,
+                             .renderArea =
+                                 {
+                                     .offset = {0, 0},
+                                     .extend = swapChainInfo.extent,
+                                 },
+                             .clearValueCount = 1,
+                             .clearValue = &clearValue};
+
+  rhi->cmdBeginRenderPass(nullptr, &renderPassBeginInfo,
+                          RHISubpassContents::Inline);
+  rhi->cmdBindPipeline(nullptr, RHIPipelineBindPoint::Graphics, nullptr);
+  rhi->cmdSetViewport(nullptr, 0, 1, &viewport);
+  rhi->cmdSetScissor(nullptr, 0, 1, &scissor);
+  rhi->cmdDraw(nullptr, 3, 1, 0, 0);
+  rhi->cmdEndRenderPass(nullptr);
+  rhi->endCommandBuffer(nullptr);
+
+  rhi->submitRendering();
 }
 void RenderSystem::tick(float deltaTime) {}
 
@@ -175,7 +200,6 @@ std::vector<char> RenderSystem::readFile(const std::string& filename) {
   if (!file.is_open()) {
     throw std::runtime_error("failed to open file!");
   }
-
 
   size_t fileSize = file.tellg();
   std::vector<char> buffer(fileSize);

@@ -29,6 +29,8 @@ DEF_VULKAN_RESOURCE_CLASS(Pipeline, vk::Pipeline);
 DEF_VULKAN_RESOURCE_CLASS(PipelineLayout, vk::PipelineLayout);
 DEF_VULKAN_RESOURCE_CLASS(Shader, vk::ShaderModule);
 DEF_VULKAN_RESOURCE_CLASS(RenderPass, vk::RenderPass);
+DEF_VULKAN_RESOURCE_CLASS(CommandBuffer, vk::CommandBuffer);
+DEF_VULKAN_RESOURCE_CLASS(Framebuffer, vk::Framebuffer);
 
 }  // namespace Sparrow
 
