@@ -23,7 +23,7 @@ class RenderSystem {
   void tick(float deltaTime);
 
  private:
-  static std::vector<uint32_t> readFile(const std::string& filename);
+  static std::vector<char> readFile(const std::string& filename);
   std::shared_ptr<RHI> rhi;
 };
 

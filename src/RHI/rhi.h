@@ -19,7 +19,7 @@ class RHI {
   virtual void createSwapChainImageView() = 0;
   virtual void createFramebufferImageAndView() = 0;
   virtual std::unique_ptr<RHIShader> createShaderModule(
-      std::span<uint32_t> shader_code) = 0;
+      std::span<char> shader_code) = 0;
   virtual bool createGraphicsPipeline(
       const RHIGraphicsPipelineCreateInfo& createInfo) = 0;
   virtual std::unique_ptr<RHIRenderPass> createRenderPass(

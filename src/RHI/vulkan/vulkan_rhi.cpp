@@ -271,9 +271,11 @@ void VulkanRHI::createFramebufferImageAndView() {
 }
 
 std::unique_ptr<RHIShader> VulkanRHI::createShaderModule(
-    std::span<uint32_t> shader_code) {
+    std::span<char> shader_code) {
   auto shaderModuleCreateInfo =
-      vk::ShaderModuleCreateInfo().setCode(shader_code);
+      vk::ShaderModuleCreateInfo()
+          .setCodeSize(shader_code.size())
+          .setPCode(reinterpret_cast<const uint32_t*>(shader_code.data()));
 
   vk::ShaderModule vkShaderModule;
   if (device.createShaderModule(&shaderModuleCreateInfo, nullptr,

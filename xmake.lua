@@ -14,6 +14,7 @@ target("SparrowEngine")
     add_files("src/**/*.cpp")
     add_includedirs("./src")
     add_packages("glfw", "vulkansdk")
+    add_defines("SHADER_DIR=\"" .. path.join(os.projectdir(), "src/shader"):gsub("\\", "/") .. "\"" )
 
 --
 -- If you want to known more usage about xmake, please see https://xmake.io
