@@ -12,6 +12,8 @@
 struct GLFWwindow;
 
 namespace Sparrow {
+class VulkanCommandBuffer;
+
 class WindowSystem;
 class VulkanRHI : public RHI {
  public:
@@ -32,21 +34,28 @@ class VulkanRHI : public RHI {
   void createSyncPrimitives();
 #pragma endregion
 
-#pragma region Super
+  /*** Override ***/
+  /* Creation */
   void createSwapChain() override;
   void createSwapChainImageView() override;
-  std::unique_ptr<RHIFramebuffer> createFramebuffer(RHIFramebufferCreateInfo *createInfo) override;
+  std::unique_ptr<RHIFramebuffer> createFramebuffer(
+      RHIFramebufferCreateInfo& createInfo) override;
   void createFramebufferImageAndView() override;
   std::unique_ptr<RHIShader> createShaderModule(
       std::span<char> shader_code) override;
-  bool createGraphicsPipeline(
+  std::unique_ptr<RHIPipeline> createGraphicsPipeline(
       const RHIGraphicsPipelineCreateInfo& createInfo) override;
   std::unique_ptr<RHIRenderPass> createRenderPass(
       const RHIRenderPassCreateInfo& createInfo) override;
   std::unique_ptr<RHIPipelineLayout> createPipelineLayout(
       const RHIPipelineLayoutCreateInfo& createInfo) override;
 
+  /* Query */
   RHISwapChainInfo getSwapChainInfo() override;
+  RHICommandBuffer* getCurrentCommandBuffer() override;
+  std::span<RHICommandBuffer> getCommandBuffers() override;
+
+  /* Command */
   bool beginCommandBuffer(
       RHICommandBuffer* commandBuffer,
       RHICommandBufferBeginInfo* commandBufferBeginInfo) override;
@@ -74,7 +83,6 @@ class VulkanRHI : public RHI {
                      const RHIRect2D* pScissors) override;
 
   void submitRendering() override;
-#pragma endregion
 
 #pragma region Structs
  private:
@@ -134,6 +142,7 @@ class VulkanRHI : public RHI {
   // Command pool and command buffers
   vk::CommandPool commandPool;
   std::vector<vk::CommandBuffer> commandBuffers;
+  // std::vector<VulkanCommandBuffer> _commandBuffers;
 
   // Surface
   vk::SurfaceKHR surface;
@@ -168,7 +177,7 @@ class VulkanRHI : public RHI {
 
   // pipeline
   // std::vector<vk::Pipeline> graphicsPipeline;
-  vk::Pipeline graphicsPipeline;
+  // vk::Pipeline graphicsPipeline;
   vk::PipelineCache graphicsPipelineCache;
 
 #pragma endregion

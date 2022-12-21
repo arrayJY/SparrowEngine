@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <span>
+#include <vector>
 #include "rhi_struct.h"
 
 namespace Sparrow {
@@ -18,10 +19,11 @@ class RHI {
   virtual void createSwapChain() = 0;
   virtual void createSwapChainImageView() = 0;
   virtual void createFramebufferImageAndView() = 0;
-  virtual std::unique_ptr<RHIFramebuffer> createFramebuffer(RHIFramebufferCreateInfo* createInfo) = 0;
+  virtual std::unique_ptr<RHIFramebuffer> createFramebuffer(
+      RHIFramebufferCreateInfo& createInfo) = 0;
   virtual std::unique_ptr<RHIShader> createShaderModule(
       std::span<char> shader_code) = 0;
-  virtual bool createGraphicsPipeline(
+  virtual std::unique_ptr<RHIPipeline> createGraphicsPipeline(
       const RHIGraphicsPipelineCreateInfo& createInfo) = 0;
   virtual std::unique_ptr<RHIRenderPass> createRenderPass(
       const RHIRenderPassCreateInfo& createInfo) = 0;
@@ -31,6 +33,8 @@ class RHI {
 
 #pragma region Query
   virtual RHISwapChainInfo getSwapChainInfo() = 0;
+  virtual RHICommandBuffer* getCurrentCommandBuffer() = 0;
+  virtual std::span<RHICommandBuffer> getCommandBuffers() = 0;
 #pragma endregion
 
 #pragma region Command

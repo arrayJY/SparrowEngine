@@ -277,15 +277,15 @@ const T* Cast(U* value) {
 }
 
 std::unique_ptr<RHIFramebuffer> VulkanRHI::createFramebuffer(
-    RHIFramebufferCreateInfo* createInfo) {
+    RHIFramebufferCreateInfo& createInfo) {
   auto frameBufferCreateInfo =
       vk::FramebufferCreateInfo()
-          .setRenderPass(CastResource<VulkanRenderPass>(createInfo->renderPass)
+          .setRenderPass(CastResource<VulkanRenderPass>(createInfo.renderPass)
                              ->getResource())
           .setAttachments(swapChainImagesViews)
-          .setWidth(createInfo->width)
-          .setHeight(createInfo->height)
-          .setLayers(createInfo->layers);
+          .setWidth(createInfo.width)
+          .setHeight(createInfo.height)
+          .setLayers(createInfo.layers);
   vk::Framebuffer vkFramebuffer;
   if (device.createFramebuffer(&frameBufferCreateInfo, nullptr,
                                &vkFramebuffer) != vk::Result::eSuccess) {
@@ -328,7 +328,7 @@ std::unique_ptr<RHIShader> VulkanRHI::createShaderModule(
   return vulkanShader;
 }
 
-bool VulkanRHI::createGraphicsPipeline(
+std::unique_ptr<RHIPipeline> VulkanRHI::createGraphicsPipeline(
     const RHIGraphicsPipelineCreateInfo& createInfo) {
   const auto shaderStageCount = createInfo.stageCount;
   const auto& rhiShaderStages = createInfo.shaderStageCreateInfo;
@@ -466,15 +466,16 @@ bool VulkanRHI::createGraphicsPipeline(
                   : nullptr)
           .setBasePipelineIndex(createInfo.basePipelineIndex);
 
+  vk::Pipeline vkGraphicsPipeline;
   if (auto pipelineCreateResult =
           device.createGraphicsPipelines(
               graphicsPipelineCache, 1, &graphicsPipelineCreateInfo, nullptr,
-              &graphicsPipeline) == vk::Result::eSuccess) {
-    // graphicsPipeline = pipelineCreateResult.value;
-    return true;
+              &vkGraphicsPipeline) != vk::Result::eSuccess) {
+    return nullptr;
   }
-
-  return false;
+  auto pipeline = std::make_unique<VulkanPipeline>();
+  pipeline->setResource(vkGraphicsPipeline);
+  return pipeline;
 }
 
 std::unique_ptr<RHIRenderPass> VulkanRHI::createRenderPass(
@@ -528,6 +529,16 @@ RHISwapChainInfo VulkanRHI::getSwapChainInfo() {
       .imageFormat = static_cast<RHIFormat>(swapChainImageFormat.format)};
 }
 
+RHICommandBuffer* VulkanRHI::getCurrentCommandBuffer() {
+  return reinterpret_cast<VulkanCommandBuffer*>(
+      &commandBuffers[currentFrameIndex]);
+}
+
+std::span<RHICommandBuffer> VulkanRHI::getCommandBuffers() {
+  return {reinterpret_cast<RHICommandBuffer*>(commandBuffers.data()),
+          commandBuffers.size()};
+}
+
 bool VulkanRHI::beginCommandBuffer(
     RHICommandBuffer* commandBuffer,
     RHICommandBufferBeginInfo* commandBufferBeginInfo) {
@@ -539,8 +550,8 @@ bool VulkanRHI::beginCommandBuffer(
         .setPInheritanceInfo(Cast<vk::CommandBufferInheritanceInfo>(
             commandBufferBeginInfo->inheritanceInfo));
   }
-  auto& vkCommandBuffer =
-      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  auto vkCommandBuffer =
+      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
   if (vkCommandBuffer.begin(&beginInfo) != vk::Result::eSuccess) {
     std::cerr << "BeginCommandBuffer failed.";
     return false;
@@ -549,8 +560,8 @@ bool VulkanRHI::beginCommandBuffer(
 }
 
 bool VulkanRHI::endCommandBuffer(RHICommandBuffer* commandBuffer) {
-  auto& vkCommandBuffer =
-      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  auto vkCommandBuffer =
+      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
   try {
     vkCommandBuffer.end();
   } catch (std::runtime_error e) {
@@ -563,8 +574,8 @@ bool VulkanRHI::endCommandBuffer(RHICommandBuffer* commandBuffer) {
 void VulkanRHI::cmdBeginRenderPass(RHICommandBuffer* commandBuffer,
                                    RHIRenderPassBeginInfo* beginInfo,
                                    RHISubpassContents contents) {
-  auto& vkCommandBuffer =
-      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  auto vkCommandBuffer =
+      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
 
   auto renderPassBeginInfo = vk::RenderPassBeginInfo();
 
@@ -584,21 +595,20 @@ void VulkanRHI::cmdBeginRenderPass(RHICommandBuffer* commandBuffer,
 }
 
 void VulkanRHI::cmdEndRenderPass(RHICommandBuffer* commandBuffer) {
-  auto& vkCommandBuffer =
-      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  auto vkCommandBuffer =
+      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
   vkCommandBuffer.endRenderPass();
 }
 
 void VulkanRHI::cmdBindPipeline(RHICommandBuffer* commandBuffer,
                                 RHIPipelineBindPoint bindPoint,
                                 RHIPipeline* pipeline) {
-  auto& vkCommandBuffer =
-      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  auto vkCommandBuffer =
+      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
 
   vkCommandBuffer.bindPipeline(
       Cast<vk::PipelineBindPoint>(bindPoint),
-      // CastResource<VulkanPipeline>(pipeline)->getResource());
-      graphicsPipeline);
+      CastResource<VulkanPipeline>(pipeline)->getResource());
 }
 
 void VulkanRHI::cmdDraw(RHICommandBuffer* commandBuffer,
@@ -606,8 +616,8 @@ void VulkanRHI::cmdDraw(RHICommandBuffer* commandBuffer,
                         uint32_t instanceCount,
                         uint32_t firstVertex,
                         uint32_t firstInstance) {
-  auto& vkCommandBuffer =
-      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  auto vkCommandBuffer =
+      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
   vkCommandBuffer.draw(vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
@@ -615,8 +625,8 @@ void VulkanRHI::cmdSetViewport(RHICommandBuffer* commandBuffer,
                                uint32_t firstViewport,
                                uint32_t viewportCount,
                                const RHIViewport* pViewports) {
-  auto& vkCommandBuffer =
-      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  auto vkCommandBuffer =
+      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
 
   vkCommandBuffer.setViewport(firstViewport, viewportCount,
                               Cast<vk::Viewport>(pViewports));
@@ -626,8 +636,8 @@ void VulkanRHI::cmdSetScissor(RHICommandBuffer* commandBuffer,
                               uint32_t firstScissor,
                               uint32_t scissorCount,
                               const RHIRect2D* pScissors) {
-  auto& vkCommandBuffer =
-      commandBuffers[currentFrameIndex];  // TODO: use outer resource.
+  auto vkCommandBuffer =
+      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
   vkCommandBuffer.setScissor(firstScissor, scissorCount,
                              Cast<vk::Rect2D>(pScissors));
 }

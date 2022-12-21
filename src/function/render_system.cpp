@@ -151,7 +151,7 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .layers = 1,
   };
 
-  auto framebuffer = rhi->createFramebuffer(&framebufferCreateInfo);
+  auto framebuffer = rhi->createFramebuffer(framebufferCreateInfo);
 
   auto grpahicPipelineCreateInfo = RHIGraphicsPipelineCreateInfo{
       .stageCount = 2,
@@ -171,9 +171,12 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .basePipelineIndex = -1,
   };
 
-  rhi->createGraphicsPipeline(grpahicPipelineCreateInfo);
+  auto graphicsPipeline =
+      rhi->createGraphicsPipeline(grpahicPipelineCreateInfo);
 
-  rhi->beginCommandBuffer(nullptr, nullptr);
+  auto commandBuffer = rhi->getCurrentCommandBuffer();
+
+  rhi->beginCommandBuffer(commandBuffer, nullptr);
 
   RHIClearValue clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
   auto renderPassBeginInfo =
@@ -187,14 +190,14 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
                              .clearValueCount = 1,
                              .clearValue = &clearValue};
 
-  rhi->cmdBeginRenderPass(nullptr, &renderPassBeginInfo,
+  rhi->cmdBeginRenderPass(commandBuffer, &renderPassBeginInfo,
                           RHISubpassContents::Inline);
-  rhi->cmdBindPipeline(nullptr, RHIPipelineBindPoint::Graphics, nullptr);
-  rhi->cmdSetViewport(nullptr, 0, 1, &viewport);
-  rhi->cmdSetScissor(nullptr, 0, 1, &scissor);
-  rhi->cmdDraw(nullptr, 3, 1, 0, 0);
-  rhi->cmdEndRenderPass(nullptr);
-  rhi->endCommandBuffer(nullptr);
+  rhi->cmdBindPipeline(commandBuffer, RHIPipelineBindPoint::Graphics, graphicsPipeline.get());
+  rhi->cmdSetViewport(commandBuffer, 0, 1, &viewport);
+  rhi->cmdSetScissor(commandBuffer, 0, 1, &scissor);
+  rhi->cmdDraw(commandBuffer, 3, 1, 0, 0);
+  rhi->cmdEndRenderPass(commandBuffer);
+  rhi->endCommandBuffer(commandBuffer);
 
   rhi->submitRendering();
 }
