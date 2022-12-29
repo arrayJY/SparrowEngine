@@ -271,6 +271,11 @@ R* CastResource(T* value) {
   return static_cast<R*>(value);
 }
 
+template <typename ResourceType, typename T>
+inline typename ResourceType::Type GetResource(T* res) {
+  return static_cast<ResourceType*>(res)->getResource();
+}
+
 template <typename T, typename U>
 const T* Cast(U* value) {
   return reinterpret_cast<const T*>(value);
@@ -280,8 +285,7 @@ std::unique_ptr<RHIFramebuffer> VulkanRHI::createFramebuffer(
     RHIFramebufferCreateInfo& createInfo) {
   auto frameBufferCreateInfo =
       vk::FramebufferCreateInfo()
-          .setRenderPass(CastResource<VulkanRenderPass>(createInfo.renderPass)
-                             ->getResource())
+          .setRenderPass(GetResource<VulkanRenderPass>(createInfo.renderPass))
           .setAttachments(swapChainImagesViews)
           .setWidth(createInfo.width)
           .setHeight(createInfo.height)
@@ -351,8 +355,7 @@ std::unique_ptr<RHIPipeline> VulkanRHI::createGraphicsPipeline(
     shaderStageCreateInfo
         .setStage(Cast<vk::ShaderStageFlagBits>(rhiShaderStage.stage))
         .setPName(rhiShaderStage.name)
-        .setModule(
-            CastResource<VulkanShader>(rhiShaderStage.module)->getResource())
+        .setModule(GetResource<VulkanShader>(rhiShaderStage.module))
         .setPSpecializationInfo(
             Cast<vk::SpecializationInfo>(rhiShaderStage.specializationInfo));
   }
@@ -454,15 +457,12 @@ std::unique_ptr<RHIPipeline> VulkanRHI::createGraphicsPipeline(
           .setPColorBlendState(&colorBlendStateCreateInfo)
           .setPDynamicState(&dynamicStateCreateInfo)
           .setLayout(
-              CastResource<VulkanPipelineLayout>(createInfo.pipelineLayout)
-                  ->getResource())
-          .setRenderPass(CastResource<VulkanRenderPass>(createInfo.renderPass)
-                             ->getResource())
+              GetResource<VulkanPipelineLayout>(createInfo.pipelineLayout))
+          .setRenderPass(GetResource<VulkanRenderPass>(createInfo.renderPass))
           .setSubpass(createInfo.subpass)
           .setBasePipelineHandle(
               createInfo.basePipelineHandle
-                  ? CastResource<VulkanPipeline>(createInfo.basePipelineHandle)
-                        ->getResource()
+                  ? GetResource<VulkanPipeline>(createInfo.basePipelineHandle)
                   : nullptr)
           .setBasePipelineIndex(createInfo.basePipelineIndex);
 
@@ -550,8 +550,7 @@ bool VulkanRHI::beginCommandBuffer(
         .setPInheritanceInfo(Cast<vk::CommandBufferInheritanceInfo>(
             commandBufferBeginInfo->inheritanceInfo));
   }
-  auto vkCommandBuffer =
-      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
   if (vkCommandBuffer.begin(&beginInfo) != vk::Result::eSuccess) {
     std::cerr << "BeginCommandBuffer failed.";
     return false;
@@ -560,8 +559,7 @@ bool VulkanRHI::beginCommandBuffer(
 }
 
 bool VulkanRHI::endCommandBuffer(RHICommandBuffer* commandBuffer) {
-  auto vkCommandBuffer =
-      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
   try {
     vkCommandBuffer.end();
   } catch (std::runtime_error e) {
@@ -574,17 +572,14 @@ bool VulkanRHI::endCommandBuffer(RHICommandBuffer* commandBuffer) {
 void VulkanRHI::cmdBeginRenderPass(RHICommandBuffer* commandBuffer,
                                    RHIRenderPassBeginInfo* beginInfo,
                                    RHISubpassContents contents) {
-  auto vkCommandBuffer =
-      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
 
   auto renderPassBeginInfo = vk::RenderPassBeginInfo();
 
   if (beginInfo) {
     renderPassBeginInfo
-        .setRenderPass(CastResource<VulkanRenderPass>(beginInfo->renderPass)
-                           ->getResource())
-        .setFramebuffer(CastResource<VulkanFramebuffer>(beginInfo->frameBuffer)
-                            ->getResource())
+        .setRenderPass(GetResource<VulkanRenderPass>(beginInfo->renderPass))
+        .setFramebuffer(GetResource<VulkanFramebuffer>(beginInfo->frameBuffer))
         .setRenderArea(Cast<vk::Rect2D>(beginInfo->renderArea))
         .setClearValueCount(beginInfo->clearValueCount)
         .setPClearValues(Cast<vk::ClearValue>(beginInfo->clearValue));
@@ -595,20 +590,16 @@ void VulkanRHI::cmdBeginRenderPass(RHICommandBuffer* commandBuffer,
 }
 
 void VulkanRHI::cmdEndRenderPass(RHICommandBuffer* commandBuffer) {
-  auto vkCommandBuffer =
-      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
   vkCommandBuffer.endRenderPass();
 }
 
 void VulkanRHI::cmdBindPipeline(RHICommandBuffer* commandBuffer,
                                 RHIPipelineBindPoint bindPoint,
                                 RHIPipeline* pipeline) {
-  auto vkCommandBuffer =
-      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
-
-  vkCommandBuffer.bindPipeline(
-      Cast<vk::PipelineBindPoint>(bindPoint),
-      CastResource<VulkanPipeline>(pipeline)->getResource());
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
+  vkCommandBuffer.bindPipeline(Cast<vk::PipelineBindPoint>(bindPoint),
+                               GetResource<VulkanPipeline>(pipeline));
 }
 
 void VulkanRHI::cmdDraw(RHICommandBuffer* commandBuffer,
@@ -616,8 +607,7 @@ void VulkanRHI::cmdDraw(RHICommandBuffer* commandBuffer,
                         uint32_t instanceCount,
                         uint32_t firstVertex,
                         uint32_t firstInstance) {
-  auto vkCommandBuffer =
-      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
   vkCommandBuffer.draw(vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
@@ -625,8 +615,7 @@ void VulkanRHI::cmdSetViewport(RHICommandBuffer* commandBuffer,
                                uint32_t firstViewport,
                                uint32_t viewportCount,
                                const RHIViewport* pViewports) {
-  auto vkCommandBuffer =
-      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
 
   vkCommandBuffer.setViewport(firstViewport, viewportCount,
                               Cast<vk::Viewport>(pViewports));
@@ -636,8 +625,7 @@ void VulkanRHI::cmdSetScissor(RHICommandBuffer* commandBuffer,
                               uint32_t firstScissor,
                               uint32_t scissorCount,
                               const RHIRect2D* pScissors) {
-  auto vkCommandBuffer =
-      CastResource<VulkanCommandBuffer>(commandBuffer)->getResource();
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
   vkCommandBuffer.setScissor(firstScissor, scissorCount,
                              Cast<vk::Rect2D>(pScissors));
 }
@@ -649,7 +637,7 @@ void VulkanRHI::submitRendering() {
           .setPWaitSemaphores(
               &imageAvailableForRenderSemaphores[currentSwapChainImageIndex])
           .setCommandBufferCount(1)
-          .setPCommandBuffers(&commandBuffers[currentFrameIndex])
+          .setPCommandBuffers(Cast<vk::CommandBuffer>(&commandBuffers[currentFrameIndex]))
           .setSignalSemaphoreCount(1)
           .setPSignalSemaphores(
               &imageFinishedForPresentationSemaphores[currentFrameIndex]);

@@ -20,8 +20,8 @@ class VulkanRHI : public RHI {
   void initialize(const RHIInitInfo& initInfo) override;
   ~VulkanRHI() override;
 
-#pragma region Initialize
  private:
+  /*** Initialize ***/
   void init(WindowSystem* windowSystem);
   void createInstance();
   void setupDebugMessenger();
@@ -32,7 +32,6 @@ class VulkanRHI : public RHI {
   void createCommandBuffers();
   void createDescriptorPool();
   void createSyncPrimitives();
-#pragma endregion
 
   /*** Override ***/
   /* Creation */
@@ -84,8 +83,8 @@ class VulkanRHI : public RHI {
 
   void submitRendering() override;
 
-#pragma region Structs
  private:
+  /*** Structs ***/
   struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
     std::optional<uint32_t> presentFamily;
@@ -100,10 +99,9 @@ class VulkanRHI : public RHI {
     std::vector<vk::SurfaceFormatKHR> formats;
     std::vector<vk::PresentModeKHR> presentModes;
   };
-#pragma endregion
 
-#pragma region Utils
  private:
+  /*** Utils ***/
   static bool checkValidationLayerSupport(
       const std::vector<const char*>& layerNames);
   static VKAPI_ATTR vk::Bool32 VKAPI_CALL
@@ -122,9 +120,6 @@ class VulkanRHI : public RHI {
   vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
   vk::Format findDepthFormat();
 
-#pragma endregion
-
-#pragma region Vulkan
  private:
   // Instance
   vk::Instance instance;
@@ -142,7 +137,6 @@ class VulkanRHI : public RHI {
   // Command pool and command buffers
   vk::CommandPool commandPool;
   std::vector<vk::CommandBuffer> commandBuffers;
-  // std::vector<VulkanCommandBuffer> _commandBuffers;
 
   // Surface
   vk::SurfaceKHR surface;
@@ -176,19 +170,11 @@ class VulkanRHI : public RHI {
   vk::DescriptorPool descriptorPool;
 
   // pipeline
-  // std::vector<vk::Pipeline> graphicsPipeline;
-  // vk::Pipeline graphicsPipeline;
   vk::PipelineCache graphicsPipelineCache;
 
-#pragma endregion
-
-#pragma region GLFW
   // GLFW
-  static constexpr unsigned WIDTH = 800;
-  static constexpr unsigned HEIGHT = 600;
   GLFWwindow* window = nullptr;
   uint32_t width = 0, height = 0;
-#pragma endregion
 };
 }  // namespace Sparrow
 

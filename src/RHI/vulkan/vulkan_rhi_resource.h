@@ -19,6 +19,7 @@
 #define DEF_RESOURCE_CLASS(ClassName, ParentName, ResourceType) \
   class ClassName : public ParentName {                         \
    public:                                                      \
+    using Type = ResourceType;                                  \
     ClassName() : resource() {}                                 \
     ClassName(const ResourceType& res) : resource(res) {}       \
     RESOURCE_COMMON_BODY(ResourceType)                          \
