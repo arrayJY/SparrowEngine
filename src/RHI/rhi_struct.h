@@ -17,6 +17,8 @@ using RHIBool32 = uint32_t;
 static constexpr RHIBool32 RHIFalse = 0U;
 static constexpr RHIBool32 RHITrue = 1U;
 
+using RHIDeviceSize = uint64_t;
+
 #pragma region Command
 struct RHICommandBufferInheritanceInfo;
 #pragma endregion
@@ -33,6 +35,8 @@ class RHIRenderPass {};
 class RHIFramebuffer {};
 class RHICommandBuffer {};
 class RHIImageView {};
+class RHIBuffer {};
+class RHIDeviceMemory {};
 
 #pragma endregion
 
@@ -339,6 +343,14 @@ struct RHIFramebufferCreateInfo {
   uint32_t width;
   uint32_t height;
   uint32_t layers;
+};
+
+struct RHIBufferCreateInfo {
+  RHIDeviceSize size = {};
+  RHIBufferUsageFlag usage = {};
+  RHISharingMode sharingMode = RHISharingMode::Exclusive;
+  uint32_t queueFamilyIndexCount = {};
+  const uint32_t* queueFamilyIndices = {};
 };
 
 }  // namespace Sparrow

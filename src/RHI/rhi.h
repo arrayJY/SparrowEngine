@@ -32,6 +32,10 @@ class RHI {
   virtual std::unique_ptr<RHIPipelineLayout> createPipelineLayout(
       const RHIPipelineLayoutCreateInfo& createInfo) = 0;
 
+  virtual std::tuple<std::unique_ptr<RHIBuffer>,
+                     std::unique_ptr<RHIDeviceMemory>>
+  createBuffer(const RHIBufferCreateInfo& createInfo) = 0;
+
   /*** Query ***/
   virtual RHISwapChainInfo getSwapChainInfo() = 0;
   virtual RHICommandBuffer* getCurrentCommandBuffer() = 0;

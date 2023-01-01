@@ -245,8 +245,8 @@ void VulkanRHI::recreateSwapChain() {
 
   device.waitIdle();
 
-  if (device.waitForFences(1, &isFrameInFlightFences[currentFrameIndex], VK_TRUE,
-                           UINT64_MAX) != vk::Result::eSuccess) {
+  if (device.waitForFences(1, &isFrameInFlightFences[currentFrameIndex],
+                           VK_TRUE, UINT64_MAX) != vk::Result::eSuccess) {
     std::cerr << "WaitForFences failed.";
     return;
   }
@@ -283,31 +283,6 @@ void VulkanRHI::createSwapChainImageView() {
                 vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
     swapChainImagesViews[i] = device.createImageView(createImageViewInfo);
   }
-}
-template <typename T, typename U>
-  requires std::is_enum_v<T>
-T Cast(U value) {
-  return static_cast<T>(value);
-}
-template <typename T, typename U>
-  requires std::is_class_v<T>
-T Cast(U value) {
-  return *reinterpret_cast<T*>(&value);
-}
-
-template <typename R, typename T>
-R* CastResource(T* value) {
-  return static_cast<R*>(value);
-}
-
-template <typename ResourceType, typename T>
-inline typename ResourceType::Type GetResource(T* res) {
-  return static_cast<ResourceType*>(res)->getResource();
-}
-
-template <typename T, typename U>
-const T* Cast(U* value) {
-  return reinterpret_cast<const T*>(value);
 }
 
 std::unique_ptr<RHIFramebuffer> VulkanRHI::createFramebuffer(
@@ -546,6 +521,19 @@ std::unique_ptr<RHIPipelineLayout> VulkanRHI::createPipelineLayout(
   auto pipelineLayout = std::make_unique<VulkanPipelineLayout>();
   pipelineLayout->setResource(vkPipelineLayout);
   return pipelineLayout;
+}
+
+std::tuple<std::unique_ptr<RHIBuffer>, std::unique_ptr<RHIDeviceMemory>>
+VulkanRHI::createBuffer(const RHIBufferCreateInfo& createInfo) {
+  auto [vkBuffer, vkDeviceMemory] =
+      VulkanUtils::createBuffer(gpu, device, createInfo);
+
+  auto buffer = std::make_unique<VulkanBuffer>();
+  auto deviceMemory = std::make_unique<VulkanDeviceMemory>();
+  buffer->setResource(vkBuffer);
+  deviceMemory->setResource(vkDeviceMemory);
+
+  return std::make_tuple(std::move(buffer), std::move(deviceMemory));
 }
 
 RHISwapChainInfo VulkanRHI::getSwapChainInfo() {

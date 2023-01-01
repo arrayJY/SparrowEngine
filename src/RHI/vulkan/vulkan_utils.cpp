@@ -3,6 +3,8 @@
 //
 
 #include "vulkan_utils.h"
+#include <iostream>
+#include "RHI/rhi_struct.h"
 
 namespace Sparrow {
 void VulkanUtils::createImage(
@@ -79,4 +81,38 @@ vk::ImageView VulkanUtils::createImageView(vk::Device device,
   auto imageView = device.createImageView(createInfo);
   return imageView;
 }
+
+std::tuple<vk::Buffer, vk::DeviceMemory> VulkanUtils::createBuffer(
+    vk::PhysicalDevice physicalDevice,
+    vk::Device device,
+    const struct RHIBufferCreateInfo& createInfo) {
+  auto bufferCreateInfo =
+      vk::BufferCreateInfo()
+          .setSize(createInfo.size)
+          .setUsage(Cast<vk::BufferUsageFlags>(createInfo.usage))
+          .setSharingMode(Cast<vk::SharingMode>(createInfo.sharingMode));
+  vk::Buffer buffer;
+  vk::DeviceMemory deviceMemory;
+  if (device.createBuffer(&bufferCreateInfo, nullptr, &buffer) !=
+      vk::Result::eSuccess) {
+    std::cerr << "CreateBuffer failed.";
+    return std::make_tuple(buffer, deviceMemory);
+  }
+  auto memRequirements = device.getBufferMemoryRequirements(buffer);
+
+  auto allocInfo = vk::MemoryAllocateInfo()
+                       .setAllocationSize(memRequirements.size)
+                       .setMemoryTypeIndex(findMemoryType(
+                           physicalDevice, memRequirements.memoryTypeBits,
+                           vk::MemoryPropertyFlagBits::eHostVisible |
+                               vk::MemoryPropertyFlagBits::eHostCoherent));
+  if (device.allocateMemory(&allocInfo, nullptr, &deviceMemory) !=
+      vk::Result::eSuccess) {
+    std::cerr << "AllocateMemory failed.";
+    return std::make_tuple(buffer, deviceMemory);
+  }
+  device.bindBufferMemory(buffer, deviceMemory, 0);
+  return std::make_tuple(buffer, deviceMemory);
+}
+
 }  // namespace Sparrow

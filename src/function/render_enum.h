@@ -305,4 +305,27 @@ enum class RHISubpassContents {
   SecondaryCommandBuffers = 1,
 };
 
+enum class RHIBufferUsageFlag : int {
+  TransferSrc = 0x00000001,
+  TransferDst = 0x00000002,
+  UniformTexelBuffer = 0x00000004,
+  StorageTexelBuffer = 0x00000008,
+  UniformBuffer = 0x00000010,
+  StorageBuffer = 0x00000020,
+  IndexBuffer = 0x00000040,
+  VertexBuffer = 0x00000080,
+  IndirectBuffer = 0x00000100,
+  ShaderDeviceAddress = 0x00020000,
+  TransformFeedbackBufferEXT = 0x00000800,
+  TransformFeedbackCounterBufferEXT = 0x00001000,
+  ConditionalRenderingEXT = 0x00000200,
+  AccelerationStructureBuildInputReadOnlyKHR = 0x00080000,
+  AccelerationStructureStorageKHR = 0x00100000,
+  ShaderBindingTableKHR = 0x00000400,
+  RayTracingNV = RHIBufferUsageFlag::ShaderBindingTableKHR,
+  ShaderDeviceAddressEXT = RHIBufferUsageFlag::ShaderDeviceAddress,
+  ShaderDeviceAddressKHR = RHIBufferUsageFlag::ShaderDeviceAddress,
+};
+
+enum class RHISharingMode { Exclusive = 0, Concurrent = 1 };
 #endif

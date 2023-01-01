@@ -10,6 +10,31 @@
 
 namespace Sparrow {
 
+template <typename T, typename U>
+  requires std::is_enum_v<T>
+T Cast(U value) {
+  return static_cast<T>(value);
+}
+template <typename T, typename U>
+  requires std::is_class_v<T>
+T Cast(U value) {
+  return *reinterpret_cast<T*>(&value);
+}
+
+template <typename R, typename T>
+R* CastResource(T* value) {
+  return static_cast<R*>(value);
+}
+template <typename ResourceType, typename T>
+inline typename ResourceType::Type GetResource(T* res) {
+  return static_cast<ResourceType*>(res)->getResource();
+}
+
+template <typename T, typename U>
+const T* Cast(U* value) {
+  return reinterpret_cast<const T*>(value);
+}
+
 class VulkanUtils {
  public:
   static void createImage(vk::PhysicalDevice physicalDevice,
@@ -33,6 +58,11 @@ class VulkanUtils {
                                        vk::ImageViewType viewType,
                                        uint32_t layoutCount,
                                        uint32_t mipLevels);
+
+  static std::tuple<vk::Buffer, vk::DeviceMemory> createBuffer(
+      vk::PhysicalDevice physicalDevice,
+      vk::Device device,
+      const struct RHIBufferCreateInfo& createInfo);
 
   static uint32_t findMemoryType(vk::PhysicalDevice physicalDevice,
                                  uint32_t typeFilter,

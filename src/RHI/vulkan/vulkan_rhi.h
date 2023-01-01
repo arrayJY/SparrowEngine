@@ -49,6 +49,8 @@ class VulkanRHI : public RHI {
       const RHIRenderPassCreateInfo& createInfo) override;
   std::unique_ptr<RHIPipelineLayout> createPipelineLayout(
       const RHIPipelineLayoutCreateInfo& createInfo) override;
+  std::tuple<std::unique_ptr<RHIBuffer>, std::unique_ptr<RHIDeviceMemory>>
+  createBuffer(const RHIBufferCreateInfo& createInfo) override;
 
   /* Query */
   RHISwapChainInfo getSwapChainInfo() override;
