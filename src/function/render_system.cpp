@@ -204,7 +204,6 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
 void RenderSystem::tick(float deltaTime) {}
 
 std::vector<char> RenderSystem::readFile(const std::string& filename) {
-  // std::filesystem::relative(const path &Path)
   char const* shader_dir = SHADER_DIR;
   auto path = std::filesystem::path(shader_dir);
   path /= filename;

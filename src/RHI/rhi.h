@@ -15,8 +15,10 @@ struct RHIInitInfo {
 class RHI {
  public:
   virtual void initialize(const RHIInitInfo& initInfo) = 0;
-#pragma region Creation
+
+  /*** Creation ***/
   virtual void createSwapChain() = 0;
+  virtual void recreateSwapChain() = 0;
   virtual void createSwapChainImageView() = 0;
   virtual void createFramebufferImageAndView() = 0;
   virtual std::unique_ptr<RHIFramebuffer> createFramebuffer(
@@ -29,15 +31,13 @@ class RHI {
       const RHIRenderPassCreateInfo& createInfo) = 0;
   virtual std::unique_ptr<RHIPipelineLayout> createPipelineLayout(
       const RHIPipelineLayoutCreateInfo& createInfo) = 0;
-#pragma endregion
 
-#pragma region Query
+  /*** Query ***/
   virtual RHISwapChainInfo getSwapChainInfo() = 0;
   virtual RHICommandBuffer* getCurrentCommandBuffer() = 0;
   virtual std::span<RHICommandBuffer> getCommandBuffers() = 0;
-#pragma endregion
 
-#pragma region Command
+  /*** Command ***/
   virtual bool beginCommandBuffer(
       RHICommandBuffer* commandBuffer,
       RHICommandBufferBeginInfo* commandBufferBeginInfo) = 0;
@@ -64,8 +64,6 @@ class RHI {
                              uint32_t firstScissor,
                              uint32_t scissorCount,
                              const RHIRect2D* pScissors) = 0;
-
-#pragma endregion
 
   virtual ~RHI() = 0;
 };

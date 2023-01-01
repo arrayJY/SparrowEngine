@@ -36,6 +36,7 @@ class VulkanRHI : public RHI {
   /*** Override ***/
   /* Creation */
   void createSwapChain() override;
+  void recreateSwapChain() override;
   void createSwapChainImageView() override;
   std::unique_ptr<RHIFramebuffer> createFramebuffer(
       RHIFramebufferCreateInfo& createInfo) override;

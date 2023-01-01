@@ -234,6 +234,35 @@ void VulkanRHI::createSwapChain() {
   swapChain = device.createSwapchainKHR(swapChainInfo);
 }
 
+void VulkanRHI::recreateSwapChain() {
+  int _width, _height;
+  glfwGetFramebufferSize(window, &_width, &_height);
+  while (_width == 0 || _height == 0) {
+    glfwGetFramebufferSize(window, &_width, &_height);
+    glfwWaitEvents();
+  }
+  width = _width, height = _height;
+
+  device.waitIdle();
+
+  if (device.waitForFences(1, &isFrameInFlightFences[currentFrameIndex], VK_TRUE,
+                           UINT64_MAX) != vk::Result::eSuccess) {
+    std::cerr << "WaitForFences failed.";
+    return;
+  }
+
+  device.destroyImageView(depthImageView);
+  device.destroyImage(depthImage);
+  for (auto imageView : swapChainImagesViews) {
+    device.destroyImageView(imageView);
+  }
+  device.destroySwapchainKHR(swapChain);
+
+  createSwapChain();
+  createSwapChainImageView();
+  createFramebufferImageAndView();
+}
+
 void VulkanRHI::createSwapChainImageView() {
   swapChainImages = device.getSwapchainImagesKHR(swapChain);
   auto frameCount = swapChainImages.size();
@@ -637,7 +666,8 @@ void VulkanRHI::submitRendering() {
           .setPWaitSemaphores(
               &imageAvailableForRenderSemaphores[currentSwapChainImageIndex])
           .setCommandBufferCount(1)
-          .setPCommandBuffers(Cast<vk::CommandBuffer>(&commandBuffers[currentFrameIndex]))
+          .setPCommandBuffers(
+              Cast<vk::CommandBuffer>(&commandBuffers[currentFrameIndex]))
           .setSignalSemaphoreCount(1)
           .setPSignalSemaphores(
               &imageFinishedForPresentationSemaphores[currentFrameIndex]);
