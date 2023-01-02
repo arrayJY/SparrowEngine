@@ -290,8 +290,8 @@ std::unique_ptr<RHIFramebuffer> VulkanRHI::createFramebuffer(
   auto frameBufferCreateInfo =
       vk::FramebufferCreateInfo()
           .setRenderPass(GetResource<VulkanRenderPass>(createInfo.renderPass))
-          .setAttachmentCount(1)
-          .setPAttachments(&swapChainImagesViews[currentSwapChainImageIndex])
+          .setAttachmentCount(createInfo.attachmentCount)
+          .setPAttachments(Cast<vk::ImageView>(createInfo.attachments))
           .setWidth(createInfo.width)
           .setHeight(createInfo.height)
           .setLayers(createInfo.layers);

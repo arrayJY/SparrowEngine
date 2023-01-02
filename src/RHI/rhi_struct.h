@@ -340,7 +340,7 @@ struct RHIRenderPassBeginInfo {
 struct RHIFramebufferCreateInfo {
   RHIRenderPass* renderPass;
   uint32_t attachmentCount;
-  RHIImageView* const* attachments;
+  const RHIImageView* attachments;
   uint32_t width;
   uint32_t height;
   uint32_t layers;

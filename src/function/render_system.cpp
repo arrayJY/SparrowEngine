@@ -13,7 +13,6 @@
 #include "function/window_system.h"
 #include "render_mesh.h"
 
-
 namespace Sparrow {
 void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   const auto rhiInitInfo = RHIInitInfo{.windowSystem = initInfo.windowSystem};
@@ -54,6 +53,7 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   };
 
   auto swapChainInfo = rhi->getSwapChainInfo();
+  auto currentFrameIndex = rhi->getCurrentFrameIndex();
 
   float swapChainWidth = swapChainInfo.extent.width;
   float swapChainHeight = swapChainInfo.extent.height;
@@ -151,8 +151,8 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
 
   auto framebufferCreateInfo = RHIFramebufferCreateInfo{
       .renderPass = renderPass.get(),
-      .attachmentCount = 0,
-      .attachments = nullptr,
+      .attachmentCount = 1,
+      .attachments = &swapChainInfo.imageViews[currentFrameIndex],
       .width = swapChainInfo.extent.width,
       .height = swapChainInfo.extent.height,
       .layers = 1,

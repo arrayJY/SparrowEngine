@@ -11,6 +11,7 @@ namespace Sparrow {
 
 void Engine::startEngine() {
   gContext.initialize();
+  mainLoop();
 }
 
 void Engine::tick(float deltaTime) {
@@ -31,6 +32,7 @@ float Engine::calcOneFrameDeltaTime() const {
 void Engine::mainLoop() {
   while (!gContext.windowSystem->shouldClose()) {
     tick(calcOneFrameDeltaTime());
+    gContext.windowSystem->pollEvents();
   }
 }
 
