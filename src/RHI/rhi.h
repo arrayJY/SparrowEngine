@@ -55,6 +55,11 @@ class RHI {
   virtual void cmdBindPipeline(RHICommandBuffer* commandBuffer,
                                RHIPipelineBindPoint bindPoint,
                                RHIPipeline* pipeline) = 0;
+  virtual void cmdBindVertexBuffers(RHICommandBuffer* commandBuffer,
+                                    uint32_t firstBinding,
+                                    uint32_t bindingCount,
+                                    RHIBuffer* const* buffers,
+                                    const RHIDeviceSize* offsets) = 0;
   virtual void cmdDraw(RHICommandBuffer* commandBuffer,
                        uint32_t vertexCount,
                        uint32_t instanceCount,
@@ -68,6 +73,11 @@ class RHI {
                              uint32_t firstScissor,
                              uint32_t scissorCount,
                              const RHIRect2D* pScissors) = 0;
+  /*** Memory ***/
+  virtual void* mapMemory(RHIDeviceMemory* deviceMemory,
+                         RHIDeviceSize offset,
+                         RHIDeviceSize size) = 0;
+  virtual void unmapMemory(RHIDeviceMemory* deviceMemory) = 0;
 
   virtual ~RHI() = 0;
 };

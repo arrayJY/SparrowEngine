@@ -3,7 +3,7 @@ set_version("0.0.1")
 
 add_rules("mode.debug", "mode.release")
 
-add_requires("glfw", "vulkansdk")
+add_requires("glfw", "glm", "vulkansdk")
 
 set_warnings("all")
 set_languages("cxx20")
@@ -13,7 +13,7 @@ target("SparrowEngine")
     add_files("src/*.cpp")
     add_files("src/**/*.cpp")
     add_includedirs("./src")
-    add_packages("glfw", "vulkansdk")
+    add_packages("glfw", "glm", "vulkansdk")
     add_defines("SHADER_DIR=\"" .. path.join(os.projectdir(), "src/shader"):gsub("\\", "/") .. "\"" )
 
 --

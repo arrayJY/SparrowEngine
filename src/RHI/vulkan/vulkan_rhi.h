@@ -70,6 +70,11 @@ class VulkanRHI : public RHI {
   void cmdBindPipeline(RHICommandBuffer* commandBuffer,
                        RHIPipelineBindPoint bindPoint,
                        RHIPipeline* pipeline) override;
+  void cmdBindVertexBuffers(RHICommandBuffer* commandBuffer,
+                            uint32_t firstBinding,
+                            uint32_t bindingCount,
+                            RHIBuffer* const* buffers,
+                            const RHIDeviceSize* offsets) override;
   void cmdDraw(RHICommandBuffer* commandBuffer,
                uint32_t vertexCount,
                uint32_t instanceCount,
@@ -85,6 +90,12 @@ class VulkanRHI : public RHI {
                      const RHIRect2D* pScissors) override;
 
   void submitRendering() override;
+
+  /*** Memory ***/
+  void* mapMemory(RHIDeviceMemory* deviceMemory,
+                  RHIDeviceSize offset,
+                  RHIDeviceSize size) override;
+  void unmapMemory(RHIDeviceMemory* deviceMemory) override;
 
  private:
   /*** Structs ***/

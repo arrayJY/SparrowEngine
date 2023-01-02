@@ -619,6 +619,17 @@ void VulkanRHI::cmdBindPipeline(RHICommandBuffer* commandBuffer,
                                GetResource<VulkanPipeline>(pipeline));
 }
 
+void VulkanRHI::cmdBindVertexBuffers(RHICommandBuffer* commandBuffer,
+                                     uint32_t firstBinding,
+                                     uint32_t bindingCount,
+                                     RHIBuffer* const* buffers,
+                                     const RHIDeviceSize* offsets) {
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
+  vkCommandBuffer.bindVertexBuffers(firstBinding, bindingCount,
+                                    Cast<vk::Buffer>(buffers),
+                                    Cast<vk::DeviceSize>(offsets));
+}
+
 void VulkanRHI::cmdDraw(RHICommandBuffer* commandBuffer,
                         uint32_t vertexCount,
                         uint32_t instanceCount,
@@ -689,6 +700,15 @@ void VulkanRHI::submitRendering() {
 
   currentFrameIndex = (currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
 }
+
+void* VulkanRHI::mapMemory(RHIDeviceMemory* deviceMemory,
+                           RHIDeviceSize offset,
+                           RHIDeviceSize size) {
+  return device.mapMemory(GetResource<VulkanDeviceMemory>(deviceMemory), offset,
+                          size);
+}
+
+void VulkanRHI::unmapMemory(RHIDeviceMemory* deviceMemory) {}
 
 bool VulkanRHI::checkValidationLayerSupport(
     const std::vector<const char*>& layerNames) {

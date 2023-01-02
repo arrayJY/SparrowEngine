@@ -8,6 +8,8 @@
 #include <iostream>
 #include "RHI/vulkan/vulkan_rhi.h"
 #include "function/window_system.h"
+#include "render_mesh.h"
+#include <cstring>
 
 namespace Sparrow {
 void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
@@ -171,6 +173,21 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .basePipelineIndex = -1,
   };
 
+  std::vector<Vertex> verties = {{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+                                 {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+                                 {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
+  auto bufferCreateInfo =
+      RHIBufferCreateInfo{.size = sizeof(Vertex) * verties.size(),
+                          .usage = RHIBufferUsageFlag::VertexBuffer,
+                          .sharingMode = RHISharingMode::Exclusive};
+
+  auto [vertexBuffer, deviceMemory] = rhi->createBuffer(bufferCreateInfo);
+  RHIBuffer* vertexBuffers[] = {vertexBuffer.get()};
+  RHIDeviceSize offsets[] = {0};
+  auto mappedMemory = rhi->mapMemory(deviceMemory.get(), 0, bufferCreateInfo.size);
+  std::memcpy(mappedMemory, verties.data(), bufferCreateInfo.size);
+  rhi->unmapMemory(deviceMemory.get());
+
   auto graphicsPipeline =
       rhi->createGraphicsPipeline(grpahicPipelineCreateInfo);
 
@@ -192,7 +209,9 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
 
   rhi->cmdBeginRenderPass(commandBuffer, &renderPassBeginInfo,
                           RHISubpassContents::Inline);
-  rhi->cmdBindPipeline(commandBuffer, RHIPipelineBindPoint::Graphics, graphicsPipeline.get());
+  rhi->cmdBindPipeline(commandBuffer, RHIPipelineBindPoint::Graphics,
+                       graphicsPipeline.get());
+  rhi->cmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
   rhi->cmdSetViewport(commandBuffer, 0, 1, &viewport);
   rhi->cmdSetScissor(commandBuffer, 0, 1, &scissor);
   rhi->cmdDraw(commandBuffer, 3, 1, 0, 0);
