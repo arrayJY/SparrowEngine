@@ -299,6 +299,7 @@ struct RHIAttachmentReference {
 struct RHISwapChainInfo {
   RHIExtend2D extent;
   RHIFormat imageFormat;
+  RHIImageView* imageViews;
 };
 
 struct RHICommandBufferBeginInfo {

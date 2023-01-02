@@ -290,7 +290,8 @@ std::unique_ptr<RHIFramebuffer> VulkanRHI::createFramebuffer(
   auto frameBufferCreateInfo =
       vk::FramebufferCreateInfo()
           .setRenderPass(GetResource<VulkanRenderPass>(createInfo.renderPass))
-          .setAttachments(swapChainImagesViews)
+          .setAttachmentCount(1)
+          .setPAttachments(&swapChainImagesViews[currentSwapChainImageIndex])
           .setWidth(createInfo.width)
           .setHeight(createInfo.height)
           .setLayers(createInfo.layers);
@@ -536,6 +537,14 @@ VulkanRHI::createBuffer(const RHIBufferCreateInfo& createInfo) {
   return std::make_tuple(std::move(buffer), std::move(deviceMemory));
 }
 
+uint8_t VulkanRHI::getMaxFramesInFlight() {
+  return MAX_FRAMES_IN_FLIGHT;
+}
+
+uint8_t VulkanRHI::getCurrentFrameIndex() {
+  return currentFrameIndex;
+}
+
 RHISwapChainInfo VulkanRHI::getSwapChainInfo() {
   return RHISwapChainInfo{
       .extent =
@@ -543,7 +552,10 @@ RHISwapChainInfo VulkanRHI::getSwapChainInfo() {
               .width = swapChainExtent.width,
               .height = swapChainExtent.height,
           },
-      .imageFormat = static_cast<RHIFormat>(swapChainImageFormat.format)};
+      .imageFormat = static_cast<RHIFormat>(swapChainImageFormat.format),
+      .imageViews =
+          reinterpret_cast<RHIImageView*>(swapChainImagesViews.data()),
+  };
 }
 
 RHICommandBuffer* VulkanRHI::getCurrentCommandBuffer() {
@@ -625,8 +637,13 @@ void VulkanRHI::cmdBindVertexBuffers(RHICommandBuffer* commandBuffer,
                                      RHIBuffer* const* buffers,
                                      const RHIDeviceSize* offsets) {
   auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
+  std::vector<vk::Buffer> vkBuffers;
+  vkBuffers.reserve(bindingCount);
+  for (uint32_t i = 0; i < bindingCount; i++) {
+    vkBuffers.push_back(GetResource<VulkanBuffer>(buffers[i]));
+  }
   vkCommandBuffer.bindVertexBuffers(firstBinding, bindingCount,
-                                    Cast<vk::Buffer>(buffers),
+                                    vkBuffers.data(),
                                     Cast<vk::DeviceSize>(offsets));
 }
 

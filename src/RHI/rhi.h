@@ -37,6 +37,8 @@ class RHI {
   createBuffer(const RHIBufferCreateInfo& createInfo) = 0;
 
   /*** Query ***/
+  virtual uint8_t getMaxFramesInFlight() = 0;
+  virtual uint8_t getCurrentFrameIndex() = 0;
   virtual RHISwapChainInfo getSwapChainInfo() = 0;
   virtual RHICommandBuffer* getCurrentCommandBuffer() = 0;
   virtual std::span<RHICommandBuffer> getCommandBuffers() = 0;

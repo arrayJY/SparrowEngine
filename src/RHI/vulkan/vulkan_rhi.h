@@ -53,6 +53,8 @@ class VulkanRHI : public RHI {
   createBuffer(const RHIBufferCreateInfo& createInfo) override;
 
   /* Query */
+  uint8_t getMaxFramesInFlight() override;
+  uint8_t getCurrentFrameIndex() override;
   RHISwapChainInfo getSwapChainInfo() override;
   RHICommandBuffer* getCurrentCommandBuffer() override;
   std::span<RHICommandBuffer> getCommandBuffers() override;

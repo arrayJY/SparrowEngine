@@ -3,13 +3,16 @@
 //
 
 #include "render_system.h"
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include "RHI/vulkan/vulkan_rhi.h"
+#include "RHI/vulkan/vulkan_rhi_resource.h"
+#include "RHI/vulkan/vulkan_utils.h"
 #include "function/window_system.h"
 #include "render_mesh.h"
-#include <cstring>
+
 
 namespace Sparrow {
 void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
@@ -36,11 +39,13 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       vertexPipelineShaderStageCreateInfo,
       fragmentPipelineShaderStageCreateInfo};
 
+  auto bindingDescription = Vertex::getBindingDescription();
+  auto attributeDescriptions = Vertex::getAttributeDescription();
   auto vertexInputStateCreateInfo = RHIVertexInputStateCreateInfo{
-      .vertexBindingDescriptionCount = 0,
-      .vertexBindingDescriptions = nullptr,
-      .vertexAttributeDescriptionCount = 0,
-      .vertexAttributeDescriptions = nullptr,
+      .vertexBindingDescriptionCount = 1,
+      .vertexBindingDescriptions = &bindingDescription,
+      .vertexAttributeDescriptionCount = attributeDescriptions.size(),
+      .vertexAttributeDescriptions = attributeDescriptions.data(),
   };
 
   auto inputAssemblyCreateInfo = RHIInputAssemblyStateCreateInfo{
@@ -184,7 +189,8 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   auto [vertexBuffer, deviceMemory] = rhi->createBuffer(bufferCreateInfo);
   RHIBuffer* vertexBuffers[] = {vertexBuffer.get()};
   RHIDeviceSize offsets[] = {0};
-  auto mappedMemory = rhi->mapMemory(deviceMemory.get(), 0, bufferCreateInfo.size);
+  auto mappedMemory =
+      rhi->mapMemory(deviceMemory.get(), 0, bufferCreateInfo.size);
   std::memcpy(mappedMemory, verties.data(), bufferCreateInfo.size);
   rhi->unmapMemory(deviceMemory.get());
 
