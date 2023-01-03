@@ -53,6 +53,10 @@ class VulkanRHI : public RHI {
   createBuffer(const RHIBufferCreateInfo& createInfo,
                RHIMemoryPropertyFlag properties) override;
   void destoryBuffer(RHIBuffer* buffer) override;
+  std::unique_ptr<RHIDescriptorSetLayout> createDescriptorSetLayout(
+      RHIDescriptorSetLayoutCreateInfo& createInfo) override;
+  void destoryDescriptorSetLayout(
+      RHIDescriptorSetLayout* descriptorSetLayout) override;
 
   /* Query */
   uint8_t getMaxFramesInFlight() override;

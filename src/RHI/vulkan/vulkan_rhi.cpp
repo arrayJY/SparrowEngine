@@ -542,6 +542,31 @@ void VulkanRHI::destoryBuffer(RHIBuffer* buffer) {
   device.destroyBuffer(GetResource<VulkanBuffer>(buffer));
 }
 
+std::unique_ptr<RHIDescriptorSetLayout> VulkanRHI::createDescriptorSetLayout(
+    RHIDescriptorSetLayoutCreateInfo& createInfo) {
+  auto layoutInfo = vk::DescriptorSetLayoutCreateInfo()
+                        .setBindingCount(createInfo.bindingCount)
+                        .setPBindings(Cast<vk::DescriptorSetLayoutBinding>(
+                            createInfo.bindings));
+  vk::DescriptorSetLayout vkDescriptorSetLayout;
+  if (device.createDescriptorSetLayout(&layoutInfo, nullptr,
+                                       &vkDescriptorSetLayout) !=
+      vk::Result::eSuccess) {
+    std::cerr << "VulkanRHI::createDescriptorSetLayout  "
+                 "createDescriptorSetLayout failed.\n";
+    return nullptr;
+  }
+  auto descriptorSetLayout = std::make_unique<VulkanDescriptorSetLayout>();
+  descriptorSetLayout->setResource(vkDescriptorSetLayout);
+  return descriptorSetLayout;
+}
+
+void VulkanRHI::destoryDescriptorSetLayout(
+    RHIDescriptorSetLayout* descriptorSetLayout) {
+  device.destroyDescriptorSetLayout(
+      GetResource<VulkanDescriptorSetLayout>(descriptorSetLayout));
+}
+
 uint8_t VulkanRHI::getMaxFramesInFlight() {
   return MAX_FRAMES_IN_FLIGHT;
 }

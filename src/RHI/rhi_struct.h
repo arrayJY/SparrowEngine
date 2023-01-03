@@ -37,6 +37,8 @@ class RHICommandBuffer {};
 class RHIImageView {};
 class RHIBuffer {};
 class RHIDeviceMemory {};
+class RHIDescriptorSetLayout {};
+class RHISampler {};
 
 #pragma endregion
 
@@ -70,7 +72,6 @@ struct RHIStencilOpState;
 
 struct RHIColorBlendAttachmentState;
 
-struct RHIDescriptorSetLayout;
 struct RHIPushConstantRange;
 
 struct RHIAttachmentDescription;
@@ -238,7 +239,6 @@ struct RHIPipelineLayoutCreateInfo {
   uint32_t pushConstantRangeCount = {};
   const RHIPushConstantRange* pushConstantRanges = {};
 };
-struct RHIDescriptorSetLayout {};
 struct RHIPushConstantRange {
   RHIShaderStageFlag stageFlags = {};
   uint32_t offset = {};
@@ -358,6 +358,19 @@ struct RHIBufferCopy {
   RHIDeviceSize srcOffset = {};
   RHIDeviceSize dstOffset = {};
   RHIDeviceSize size = {};
+};
+
+struct RHIDescriptorSetLayoutBinding {
+  uint32_t binding = {};
+  RHIDescriptorType descriptorType = RHIDescriptorType::Sampler;
+  uint32_t descriptorCount = {};
+  RHIShaderStageFlag stageFlags = {};
+  const RHISampler* immutableSamplers = {};
+};
+
+struct RHIDescriptorSetLayoutCreateInfo {
+  uint32_t bindingCount = {};
+  const RHIDescriptorSetLayoutBinding* bindings = {};
 };
 
 }  // namespace Sparrow

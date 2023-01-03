@@ -19,8 +19,8 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   rhi = std::make_shared<VulkanRHI>();
   rhi->initialize(rhiInitInfo);
 
-  auto vertexCode = readFile("vert.spv");
-  auto fragmentCode = readFile("frag.spv");
+  auto vertexCode = readFile("shader.vert.spv");
+  auto fragmentCode = readFile("shader.frag.spv");
 
   auto vertexShader = rhi->createShaderModule(vertexCode);
   auto fragmentShader = rhi->createShaderModule(fragmentCode);
@@ -139,15 +139,32 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
                               .attachments = &attachmentDesciption,
                               .subpassCount = 1,
                               .subpasses = &subpassDescription};
+
+  auto uboLayoutBinding = RHIDescriptorSetLayoutBinding{
+      .binding = 0,
+      .descriptorType = RHIDescriptorType::UniformBuffer,
+      .descriptorCount = 1,
+      .stageFlags = RHIShaderStageFlag::Vertex,
+      .immutableSamplers = nullptr,
+  };
+  auto descriptorSetLayoutCreateInfo = RHIDescriptorSetLayoutCreateInfo{
+      .bindingCount = 1,
+      .bindings = &uboLayoutBinding,
+  };
+  auto desciptorSetLayout =
+      rhi->createDescriptorSetLayout(descriptorSetLayoutCreateInfo);
+
   auto pipelineLayoutCreateInfo = RHIPipelineLayoutCreateInfo{
-      .setLayoutCount = 0,
-      .setLayouts = nullptr,
+      .setLayoutCount = 1,
+      .setLayouts = desciptorSetLayout.get(),
       .pushConstantRangeCount = 0,
       .pushConstantRanges = nullptr,
   };
 
   auto renderPass = rhi->createRenderPass(renderPassCreateInfo);
   auto piplineLayout = rhi->createPipelineLayout(pipelineLayoutCreateInfo);
+
+  rhi->destoryDescriptorSetLayout(desciptorSetLayout.get());
 
   auto framebufferCreateInfo = RHIFramebufferCreateInfo{
       .renderPass = renderPass.get(),
@@ -323,6 +340,35 @@ RenderSystem::createVertexBuffer(std::span<Vertex> vertices) {
   rhi->freeMemory(stagingBufferMemory.get());
   return std::make_tuple(std::move(vertexBuffer),
                          std::move(vertexBufferMemory));
+}
+
+std::tuple<std::vector<std::unique_ptr<RHIBuffer>>,
+           std::vector<std::unique_ptr<RHIDeviceMemory>>>
+RenderSystem::createUniformBuffers() {
+  std::vector<std::unique_ptr<RHIBuffer>> uniformBuffers;
+  std::vector<std::unique_ptr<RHIDeviceMemory>> uniformBufferMemorys;
+
+  RHIDeviceSize bufferSize = sizeof(Transform);
+  const auto maxFramesInFlight = rhi->getMaxFramesInFlight();
+
+  uniformBuffers.resize(maxFramesInFlight);
+  uniformBufferMemorys.resize(maxFramesInFlight);
+
+  auto bufferCreateInfo = RHIBufferCreateInfo{
+      .size = bufferSize,
+      .usage = RHIBufferUsageFlag::UniformBuffer,
+      .sharingMode = RHISharingMode::Exclusive,
+  };
+  for (auto i = 0; i < maxFramesInFlight; i++) {
+    auto [buffer, deviceMemory] = rhi->createBuffer(
+        bufferCreateInfo, RHIMemoryPropertyFlag::HostVisible |
+                              RHIMemoryPropertyFlag::HostCoherent);
+    uniformBuffers[i] = std::move(buffer);
+    uniformBufferMemorys[i] = std::move(deviceMemory);
+  }
+
+  return std::make_tuple(std::move(uniformBuffers),
+                         std::move(uniformBufferMemorys));
 }
 
 }  // namespace Sparrow

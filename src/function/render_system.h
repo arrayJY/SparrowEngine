@@ -33,6 +33,10 @@ class RenderSystem {
 
   std::tuple<std::unique_ptr<RHIBuffer>, std::unique_ptr<RHIDeviceMemory>>
   createVertexBuffer(std::span<struct Vertex> vertices);
+
+  std::tuple<std::vector<std::unique_ptr<RHIBuffer>>,
+             std::vector<std::unique_ptr<RHIDeviceMemory>>>
+  createUniformBuffers();
 };
 
 }  // namespace Sparrow

@@ -4,17 +4,21 @@ set_version("0.0.1")
 add_rules("mode.debug", "mode.release")
 
 add_requires("glfw", "glm", "vulkansdk")
+add_requires("glslang", {configs = {binaryonly = true}})
 
 set_warnings("all")
 set_languages("cxx20")
 
 target("SparrowEngine")
     set_kind("binary")
+    add_rules("utils.glsl2spv", {outputdir = "build/shaders"})
+    add_files("src/shader/*.vert", "src/shader/*.frag")
     add_files("src/*.cpp")
     add_files("src/**/*.cpp")
     add_includedirs("./src")
     add_packages("glfw", "glm", "vulkansdk")
-    add_defines("SHADER_DIR=\"" .. path.join(os.projectdir(), "src/shader"):gsub("\\", "/") .. "\"" )
+    add_packages("glslang")
+    add_defines("SHADER_DIR=\"" .. path.join(os.projectdir(), "build/shaders"):gsub("\\", "/") .. "\"" )
 
 --
 -- If you want to known more usage about xmake, please see https://xmake.io

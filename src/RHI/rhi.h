@@ -36,6 +36,10 @@ class RHI {
   createBuffer(const RHIBufferCreateInfo& createInfo,
                RHIMemoryPropertyFlag properties) = 0;
   virtual void destoryBuffer(RHIBuffer* buffer) = 0;
+  virtual std::unique_ptr<RHIDescriptorSetLayout> createDescriptorSetLayout(
+      RHIDescriptorSetLayoutCreateInfo& createInfo) = 0;
+  virtual void destoryDescriptorSetLayout(
+      RHIDescriptorSetLayout* descriptorSetLayout) = 0;
 
   /*** Query ***/
   virtual uint8_t getMaxFramesInFlight() = 0;
