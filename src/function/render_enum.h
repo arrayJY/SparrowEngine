@@ -530,6 +530,14 @@ enum class RHIMemoryPropertyFlag : RHIFlag {
   RdmaCapableNV = 0x00000100,
 };
 
+enum class RHIIndexType {
+  Uint16 = 0,
+  Uint32 = 1,
+  NoneKHR = 1000165000,
+  Uint8EXT = 1000265000,
+  NoneNV = RHIIndexType::NoneKHR,
+};
+
 template <typename EnumType>
 struct RHIFlagEnum : public std::false_type {};
 

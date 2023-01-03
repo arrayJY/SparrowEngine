@@ -35,7 +35,7 @@ class RHI {
                      std::unique_ptr<RHIDeviceMemory>>
   createBuffer(const RHIBufferCreateInfo& createInfo,
                RHIMemoryPropertyFlag properties) = 0;
-
+  virtual void destoryBuffer(RHIBuffer* buffer) = 0;
 
   /*** Query ***/
   virtual uint8_t getMaxFramesInFlight() = 0;
@@ -65,11 +65,21 @@ class RHI {
                                     uint32_t bindingCount,
                                     RHIBuffer* const* buffers,
                                     const RHIDeviceSize* offsets) = 0;
+  virtual void cmdBindIndexBuffer(RHICommandBuffer* commandBuffer,
+                                  RHIBuffer* buffer,
+                                  RHIDeviceSize offset,
+                                  RHIIndexType indexType) = 0;
   virtual void cmdDraw(RHICommandBuffer* commandBuffer,
                        uint32_t vertexCount,
                        uint32_t instanceCount,
                        uint32_t firstVertex,
                        uint32_t firstInstance) = 0;
+  virtual void cmdDrawIndexed(RHICommandBuffer* commandBuffer,
+                              uint32_t indexCount,
+                              uint32_t instanceCount,
+                              uint32_t firstIndex,
+                              int32_t vertexOffset,
+                              uint32_t firstInstance) = 0;
   virtual void cmdSetViewport(RHICommandBuffer* commandBuffer,
                               uint32_t firstViewport,
                               uint32_t viewportCount,
@@ -87,6 +97,7 @@ class RHI {
                           RHIDeviceSize offset,
                           RHIDeviceSize size) = 0;
   virtual void unmapMemory(RHIDeviceMemory* deviceMemory) = 0;
+  virtual void freeMemory(RHIDeviceMemory* deviceMemory) = 0;
 
   virtual ~RHI() = 0;
 };

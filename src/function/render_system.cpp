@@ -178,45 +178,14 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .basePipelineIndex = -1,
   };
 
-  std::vector<Vertex> vertices = {{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-                                  {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-                                  {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
+  std::vector<Vertex> vertices = {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+                                  {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+                                  {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+                                  {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
+  std::vector<uint16_t> indices = {0, 1, 2, 2, 3, 0};
 
-  // Create vertex buffer
-  auto bufferCreateInfo =
-      RHIBufferCreateInfo{.size = sizeof(Vertex) * vertices.size(),
-                          .usage = RHIBufferUsageFlag::TransferDst |
-                                   RHIBufferUsageFlag::VertexBuffer,
-                          .sharingMode = RHISharingMode::Exclusive};
-
-  auto [vertexBuffer, deviceMemory] =
-      rhi->createBuffer(bufferCreateInfo, RHIMemoryPropertyFlag::DeviceLocal);
-
-  RHIBuffer* vertexBuffers[] = {vertexBuffer.get()};
-  RHIDeviceSize offsets[] = {0};
-
-  // Create Staging buffer
-  auto stagingBufferCreateInfo = RHIBufferCreateInfo{
-      .size = sizeof(Vertex) * vertices.size(),
-      .usage = RHIBufferUsageFlag::TransferSrc,
-      .sharingMode = RHISharingMode::Exclusive,
-  };
-  auto [stagingBuffer, stagingBufferMemory] = rhi->createBuffer(
-      stagingBufferCreateInfo,
-      RHIMemoryPropertyFlag::HostVisible | RHIMemoryPropertyFlag::HostCoherent);
-  auto stagingBufferMappedMemory = rhi->mapMemory(stagingBufferMemory.get(), 0,
-                                                  stagingBufferCreateInfo.size);
-  std::memcpy(stagingBufferMappedMemory, vertices.data(),
-              stagingBufferCreateInfo.size);
-  rhi->unmapMemory(stagingBufferMemory.get());
-
-  auto copyRegion = RHIBufferCopy{
-      .srcOffset = 0, .dstOffset = 0, .size = stagingBufferCreateInfo.size};
-
-  auto oneTimeCommandBuffer = rhi->beginOneTimeCommandBuffer();
-  rhi->cmdCopyBuffer(oneTimeCommandBuffer.get(), stagingBuffer.get(),
-                     vertexBuffer.get(), {&copyRegion, 1});
-  rhi->endOneTimeCommandBuffer(oneTimeCommandBuffer.get());
+  auto [vertexBuffer, vertexBufferMemory] = createVertexBuffer(vertices);
+  auto [indexBuffer, indexBufferMemory] = createIndexBuffer(indices);
 
   auto graphicsPipeline =
       rhi->createGraphicsPipeline(grpahicPipelineCreateInfo);
@@ -241,10 +210,16 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
                           RHISubpassContents::Inline);
   rhi->cmdBindPipeline(commandBuffer, RHIPipelineBindPoint::Graphics,
                        graphicsPipeline.get());
+
+  RHIBuffer* vertexBuffers[] = {vertexBuffer.get()};
+  RHIDeviceSize offsets[] = {0};
   rhi->cmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+  rhi->cmdBindIndexBuffer(commandBuffer, indexBuffer.get(), 0,
+                          RHIIndexType::Uint16);
   rhi->cmdSetViewport(commandBuffer, 0, 1, &viewport);
   rhi->cmdSetScissor(commandBuffer, 0, 1, &scissor);
-  rhi->cmdDraw(commandBuffer, 3, 1, 0, 0);
+  //   rhi->cmdDraw(commandBuffer, 3, 1, 0, 0);
+  rhi->cmdDrawIndexed(commandBuffer, indices.size(), 1, 0, 0, 0);
   rhi->cmdEndRenderPass(commandBuffer);
   rhi->endCommandBuffer(commandBuffer);
 
@@ -269,6 +244,85 @@ std::vector<char> RenderSystem::readFile(const std::string& filename) {
   file.read(buffer.data(), fileSize);
   file.close();
   return buffer;
+}
+
+std::tuple<std::unique_ptr<RHIBuffer>, std::unique_ptr<RHIDeviceMemory>>
+RenderSystem::createIndexBuffer(std::span<uint16_t> indices) {
+  auto bufferSize = sizeof(indices[0]) * indices.size();
+
+  auto stagingBufferCreateInfo = RHIBufferCreateInfo{
+      .size = bufferSize,
+      .usage = RHIBufferUsageFlag::TransferSrc,
+      .sharingMode = RHISharingMode::Exclusive,
+  };
+  auto [stagingBuffer, stagingBufferMemory] = rhi->createBuffer(
+      stagingBufferCreateInfo,
+      RHIMemoryPropertyFlag::HostVisible | RHIMemoryPropertyFlag::HostCoherent);
+  auto stagingBufferMappedMemory = rhi->mapMemory(stagingBufferMemory.get(), 0,
+                                                  stagingBufferCreateInfo.size);
+  std::memcpy(stagingBufferMappedMemory, indices.data(),
+              stagingBufferCreateInfo.size);
+  rhi->unmapMemory(stagingBufferMemory.get());
+
+  auto indexBufferCreateInfo =
+      RHIBufferCreateInfo{.size = bufferSize,
+                          .usage = RHIBufferUsageFlag::TransferDst |
+                                   RHIBufferUsageFlag::IndexBuffer,
+                          .sharingMode = RHISharingMode::Exclusive};
+
+  auto [indexBuffer, indexBufferMemory] = rhi->createBuffer(
+      indexBufferCreateInfo, RHIMemoryPropertyFlag::DeviceLocal);
+
+  auto copyRegion =
+      RHIBufferCopy{.srcOffset = 0, .dstOffset = 0, .size = bufferSize};
+
+  auto oneTimeCommandBuffer = rhi->beginOneTimeCommandBuffer();
+  rhi->cmdCopyBuffer(oneTimeCommandBuffer.get(), stagingBuffer.get(),
+                     indexBuffer.get(), {&copyRegion, 1});
+  rhi->endOneTimeCommandBuffer(oneTimeCommandBuffer.get());
+  rhi->destoryBuffer(stagingBuffer.get());
+  rhi->freeMemory(stagingBufferMemory.get());
+  return std::make_tuple(std::move(indexBuffer), std::move(indexBufferMemory));
+}
+
+std::tuple<std::unique_ptr<RHIBuffer>, std::unique_ptr<RHIDeviceMemory>>
+RenderSystem::createVertexBuffer(std::span<Vertex> vertices) {
+  // Create vertex buffer
+  auto bufferCreateInfo =
+      RHIBufferCreateInfo{.size = sizeof(Vertex) * vertices.size(),
+                          .usage = RHIBufferUsageFlag::TransferDst |
+                                   RHIBufferUsageFlag::VertexBuffer,
+                          .sharingMode = RHISharingMode::Exclusive};
+
+  auto [vertexBuffer, vertexBufferMemory] =
+      rhi->createBuffer(bufferCreateInfo, RHIMemoryPropertyFlag::DeviceLocal);
+
+  // Create Staging buffer
+  auto stagingBufferCreateInfo = RHIBufferCreateInfo{
+      .size = sizeof(Vertex) * vertices.size(),
+      .usage = RHIBufferUsageFlag::TransferSrc,
+      .sharingMode = RHISharingMode::Exclusive,
+  };
+  auto [stagingBuffer, stagingBufferMemory] = rhi->createBuffer(
+      stagingBufferCreateInfo,
+      RHIMemoryPropertyFlag::HostVisible | RHIMemoryPropertyFlag::HostCoherent);
+  auto stagingBufferMappedMemory = rhi->mapMemory(stagingBufferMemory.get(), 0,
+                                                  stagingBufferCreateInfo.size);
+  std::memcpy(stagingBufferMappedMemory, vertices.data(),
+              stagingBufferCreateInfo.size);
+  rhi->unmapMemory(stagingBufferMemory.get());
+
+  auto copyRegion = RHIBufferCopy{
+      .srcOffset = 0, .dstOffset = 0, .size = stagingBufferCreateInfo.size};
+
+  auto oneTimeCommandBuffer = rhi->beginOneTimeCommandBuffer();
+  rhi->cmdCopyBuffer(oneTimeCommandBuffer.get(), stagingBuffer.get(),
+                     vertexBuffer.get(), {&copyRegion, 1});
+  rhi->endOneTimeCommandBuffer(oneTimeCommandBuffer.get());
+  rhi->destoryBuffer(stagingBuffer.get());
+  rhi->freeMemory(stagingBufferMemory.get());
+  return std::make_tuple(std::move(vertexBuffer),
+                         std::move(vertexBufferMemory));
 }
 
 }  // namespace Sparrow

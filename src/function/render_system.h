@@ -5,8 +5,10 @@
 #define SPARROWENGINE_RENDER_SYSTEM_H
 
 #include <memory>
-#include <vector>
+#include <span>
 #include <string>
+#include <vector>
+#include "RHI/rhi_struct.h"
 
 namespace Sparrow {
 class WindowSystem;
@@ -25,6 +27,12 @@ class RenderSystem {
  private:
   static std::vector<char> readFile(const std::string& filename);
   std::shared_ptr<RHI> rhi;
+
+  std::tuple<std::unique_ptr<RHIBuffer>, std::unique_ptr<RHIDeviceMemory>>
+  createIndexBuffer(std::span<uint16_t> indices);
+
+  std::tuple<std::unique_ptr<RHIBuffer>, std::unique_ptr<RHIDeviceMemory>>
+  createVertexBuffer(std::span<struct Vertex> vertices);
 };
 
 }  // namespace Sparrow

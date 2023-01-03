@@ -538,6 +538,10 @@ VulkanRHI::createBuffer(const RHIBufferCreateInfo& createInfo,
   return std::make_tuple(std::move(buffer), std::move(deviceMemory));
 }
 
+void VulkanRHI::destoryBuffer(RHIBuffer* buffer) {
+  device.destroyBuffer(GetResource<VulkanBuffer>(buffer));
+}
+
 uint8_t VulkanRHI::getMaxFramesInFlight() {
   return MAX_FRAMES_IN_FLIGHT;
 }
@@ -686,6 +690,15 @@ void VulkanRHI::cmdBindVertexBuffers(RHICommandBuffer* commandBuffer,
                                     Cast<vk::DeviceSize>(offsets));
 }
 
+void VulkanRHI::cmdBindIndexBuffer(RHICommandBuffer* commandBuffer,
+                                   RHIBuffer* buffer,
+                                   RHIDeviceSize offset,
+                                   RHIIndexType indexType) {
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
+  vkCommandBuffer.bindIndexBuffer(GetResource<VulkanBuffer>(buffer), offset,
+                                  Cast<vk::IndexType>(indexType));
+}
+
 void VulkanRHI::cmdDraw(RHICommandBuffer* commandBuffer,
                         uint32_t vertexCount,
                         uint32_t instanceCount,
@@ -693,6 +706,17 @@ void VulkanRHI::cmdDraw(RHICommandBuffer* commandBuffer,
                         uint32_t firstInstance) {
   auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
   vkCommandBuffer.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+}
+
+void VulkanRHI::cmdDrawIndexed(RHICommandBuffer* commandBuffer,
+                               uint32_t indexCount,
+                               uint32_t instanceCount,
+                               uint32_t firstIndex,
+                               int32_t vertexOffset,
+                               uint32_t firstInstance) {
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
+  vkCommandBuffer.drawIndexed(indexCount, instanceCount, firstIndex,
+                              vertexOffset, firstInstance);
 }
 
 void VulkanRHI::cmdSetViewport(RHICommandBuffer* commandBuffer,
@@ -775,7 +799,13 @@ void* VulkanRHI::mapMemory(RHIDeviceMemory* deviceMemory,
                           size);
 }
 
-void VulkanRHI::unmapMemory(RHIDeviceMemory* deviceMemory) {}
+void VulkanRHI::unmapMemory(RHIDeviceMemory* deviceMemory) {
+  device.unmapMemory(GetResource<VulkanDeviceMemory>(deviceMemory));
+}
+
+void VulkanRHI::freeMemory(RHIDeviceMemory* deviceMemory) {
+  device.freeMemory(GetResource<VulkanDeviceMemory>(deviceMemory));
+}
 
 bool VulkanRHI::checkValidationLayerSupport(
     const std::vector<const char*>& layerNames) {

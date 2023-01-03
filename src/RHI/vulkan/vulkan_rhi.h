@@ -52,6 +52,7 @@ class VulkanRHI : public RHI {
   std::tuple<std::unique_ptr<RHIBuffer>, std::unique_ptr<RHIDeviceMemory>>
   createBuffer(const RHIBufferCreateInfo& createInfo,
                RHIMemoryPropertyFlag properties) override;
+  void destoryBuffer(RHIBuffer* buffer) override;
 
   /* Query */
   uint8_t getMaxFramesInFlight() override;
@@ -80,11 +81,21 @@ class VulkanRHI : public RHI {
                             uint32_t bindingCount,
                             RHIBuffer* const* buffers,
                             const RHIDeviceSize* offsets) override;
+  void cmdBindIndexBuffer(RHICommandBuffer* commandBuffer,
+                          RHIBuffer* buffer,
+                          RHIDeviceSize offset,
+                          RHIIndexType indexType) override;
   void cmdDraw(RHICommandBuffer* commandBuffer,
                uint32_t vertexCount,
                uint32_t instanceCount,
                uint32_t firstVertex,
                uint32_t firstInstance) override;
+  void cmdDrawIndexed(RHICommandBuffer* commandBuffer,
+                      uint32_t indexCount,
+                      uint32_t instanceCount,
+                      uint32_t firstIndex,
+                      int32_t vertexOffset,
+                      uint32_t firstInstance) override;
   void cmdSetViewport(RHICommandBuffer* commandBuffer,
                       uint32_t firstViewport,
                       uint32_t viewportCount,
@@ -105,6 +116,7 @@ class VulkanRHI : public RHI {
                   RHIDeviceSize offset,
                   RHIDeviceSize size) override;
   void unmapMemory(RHIDeviceMemory* deviceMemory) override;
+  void freeMemory(RHIDeviceMemory* deviceMemory) override;
 
  private:
   /*** Structs ***/
