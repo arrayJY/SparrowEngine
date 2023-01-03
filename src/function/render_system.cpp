@@ -178,21 +178,45 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .basePipelineIndex = -1,
   };
 
-  std::vector<Vertex> verties = {{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-                                 {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-                                 {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
+  std::vector<Vertex> vertices = {{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+                                  {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+                                  {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
+
+  // Create vertex buffer
   auto bufferCreateInfo =
-      RHIBufferCreateInfo{.size = sizeof(Vertex) * verties.size(),
-                          .usage = RHIBufferUsageFlag::VertexBuffer,
+      RHIBufferCreateInfo{.size = sizeof(Vertex) * vertices.size(),
+                          .usage = RHIBufferUsageFlag::TransferDst |
+                                   RHIBufferUsageFlag::VertexBuffer,
                           .sharingMode = RHISharingMode::Exclusive};
 
-  auto [vertexBuffer, deviceMemory] = rhi->createBuffer(bufferCreateInfo);
+  auto [vertexBuffer, deviceMemory] =
+      rhi->createBuffer(bufferCreateInfo, RHIMemoryPropertyFlag::DeviceLocal);
+
   RHIBuffer* vertexBuffers[] = {vertexBuffer.get()};
   RHIDeviceSize offsets[] = {0};
-  auto mappedMemory =
-      rhi->mapMemory(deviceMemory.get(), 0, bufferCreateInfo.size);
-  std::memcpy(mappedMemory, verties.data(), bufferCreateInfo.size);
-  rhi->unmapMemory(deviceMemory.get());
+
+  // Create Staging buffer
+  auto stagingBufferCreateInfo = RHIBufferCreateInfo{
+      .size = sizeof(Vertex) * vertices.size(),
+      .usage = RHIBufferUsageFlag::TransferSrc,
+      .sharingMode = RHISharingMode::Exclusive,
+  };
+  auto [stagingBuffer, stagingBufferMemory] = rhi->createBuffer(
+      stagingBufferCreateInfo,
+      RHIMemoryPropertyFlag::HostVisible | RHIMemoryPropertyFlag::HostCoherent);
+  auto stagingBufferMappedMemory = rhi->mapMemory(stagingBufferMemory.get(), 0,
+                                                  stagingBufferCreateInfo.size);
+  std::memcpy(stagingBufferMappedMemory, vertices.data(),
+              stagingBufferCreateInfo.size);
+  rhi->unmapMemory(stagingBufferMemory.get());
+
+  auto copyRegion = RHIBufferCopy{
+      .srcOffset = 0, .dstOffset = 0, .size = stagingBufferCreateInfo.size};
+
+  auto oneTimeCommandBuffer = rhi->beginOneTimeCommandBuffer();
+  rhi->cmdCopyBuffer(oneTimeCommandBuffer.get(), stagingBuffer.get(),
+                     vertexBuffer.get(), {&copyRegion, 1});
+  rhi->endOneTimeCommandBuffer(oneTimeCommandBuffer.get());
 
   auto graphicsPipeline =
       rhi->createGraphicsPipeline(grpahicPipelineCreateInfo);

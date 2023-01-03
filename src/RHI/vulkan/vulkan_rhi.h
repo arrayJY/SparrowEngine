@@ -50,7 +50,8 @@ class VulkanRHI : public RHI {
   std::unique_ptr<RHIPipelineLayout> createPipelineLayout(
       const RHIPipelineLayoutCreateInfo& createInfo) override;
   std::tuple<std::unique_ptr<RHIBuffer>, std::unique_ptr<RHIDeviceMemory>>
-  createBuffer(const RHIBufferCreateInfo& createInfo) override;
+  createBuffer(const RHIBufferCreateInfo& createInfo,
+               RHIMemoryPropertyFlag properties) override;
 
   /* Query */
   uint8_t getMaxFramesInFlight() override;
@@ -63,7 +64,9 @@ class VulkanRHI : public RHI {
   bool beginCommandBuffer(
       RHICommandBuffer* commandBuffer,
       RHICommandBufferBeginInfo* commandBufferBeginInfo) override;
+  std::unique_ptr<RHICommandBuffer> beginOneTimeCommandBuffer() override;
   bool endCommandBuffer(RHICommandBuffer* commandBuffer) override;
+  bool endOneTimeCommandBuffer(RHICommandBuffer* commandBuffer) override;
 
   void cmdBeginRenderPass(RHICommandBuffer* commandBuffer,
                           RHIRenderPassBeginInfo* beginInfo,
@@ -90,6 +93,10 @@ class VulkanRHI : public RHI {
                      uint32_t firstScissor,
                      uint32_t scissorCount,
                      const RHIRect2D* pScissors) override;
+  void cmdCopyBuffer(RHICommandBuffer* commandBuffer,
+                     RHIBuffer* srcBuffer,
+                     RHIBuffer* dstBuffer,
+                     std::span<RHIBufferCopy> copyRegions) override;
 
   void submitRendering() override;
 

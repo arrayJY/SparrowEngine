@@ -354,6 +354,12 @@ struct RHIBufferCreateInfo {
   const uint32_t* queueFamilyIndices = {};
 };
 
+struct RHIBufferCopy {
+  RHIDeviceSize srcOffset = {};
+  RHIDeviceSize dstOffset = {};
+  RHIDeviceSize size = {};
+};
+
 }  // namespace Sparrow
 
 #endif

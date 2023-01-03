@@ -85,7 +85,8 @@ vk::ImageView VulkanUtils::createImageView(vk::Device device,
 std::tuple<vk::Buffer, vk::DeviceMemory> VulkanUtils::createBuffer(
     vk::PhysicalDevice physicalDevice,
     vk::Device device,
-    const struct RHIBufferCreateInfo& createInfo) {
+    const struct RHIBufferCreateInfo& createInfo,
+    RHIMemoryPropertyFlag properties) {
   auto bufferCreateInfo =
       vk::BufferCreateInfo()
           .setSize(createInfo.size)
@@ -104,8 +105,7 @@ std::tuple<vk::Buffer, vk::DeviceMemory> VulkanUtils::createBuffer(
                        .setAllocationSize(memRequirements.size)
                        .setMemoryTypeIndex(findMemoryType(
                            physicalDevice, memRequirements.memoryTypeBits,
-                           vk::MemoryPropertyFlagBits::eHostVisible |
-                               vk::MemoryPropertyFlagBits::eHostCoherent));
+                           Cast<vk::MemoryPropertyFlags>(properties)));
   if (device.allocateMemory(&allocInfo, nullptr, &deviceMemory) !=
       vk::Result::eSuccess) {
     std::cerr << "AllocateMemory failed.";

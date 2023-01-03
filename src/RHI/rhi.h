@@ -31,10 +31,11 @@ class RHI {
       const RHIRenderPassCreateInfo& createInfo) = 0;
   virtual std::unique_ptr<RHIPipelineLayout> createPipelineLayout(
       const RHIPipelineLayoutCreateInfo& createInfo) = 0;
-
   virtual std::tuple<std::unique_ptr<RHIBuffer>,
                      std::unique_ptr<RHIDeviceMemory>>
-  createBuffer(const RHIBufferCreateInfo& createInfo) = 0;
+  createBuffer(const RHIBufferCreateInfo& createInfo,
+               RHIMemoryPropertyFlag properties) = 0;
+
 
   /*** Query ***/
   virtual uint8_t getMaxFramesInFlight() = 0;
@@ -48,6 +49,8 @@ class RHI {
       RHICommandBuffer* commandBuffer,
       RHICommandBufferBeginInfo* commandBufferBeginInfo) = 0;
   virtual bool endCommandBuffer(RHICommandBuffer* commandBuffer) = 0;
+  virtual std::unique_ptr<RHICommandBuffer> beginOneTimeCommandBuffer() = 0;
+  virtual bool endOneTimeCommandBuffer(RHICommandBuffer* commandBuffer) = 0;
   virtual void submitRendering() = 0;
 
   virtual void cmdBeginRenderPass(RHICommandBuffer* commandBuffer,
@@ -75,10 +78,14 @@ class RHI {
                              uint32_t firstScissor,
                              uint32_t scissorCount,
                              const RHIRect2D* pScissors) = 0;
+  virtual void cmdCopyBuffer(RHICommandBuffer* commandBuffer,
+                             RHIBuffer* srcBuffer,
+                             RHIBuffer* dstBuffer,
+                             std::span<RHIBufferCopy> copyRegions) = 0;
   /*** Memory ***/
   virtual void* mapMemory(RHIDeviceMemory* deviceMemory,
-                         RHIDeviceSize offset,
-                         RHIDeviceSize size) = 0;
+                          RHIDeviceSize offset,
+                          RHIDeviceSize size) = 0;
   virtual void unmapMemory(RHIDeviceMemory* deviceMemory) = 0;
 
   virtual ~RHI() = 0;

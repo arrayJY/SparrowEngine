@@ -62,7 +62,8 @@ class VulkanUtils {
   static std::tuple<vk::Buffer, vk::DeviceMemory> createBuffer(
       vk::PhysicalDevice physicalDevice,
       vk::Device device,
-      const struct RHIBufferCreateInfo& createInfo);
+      const struct RHIBufferCreateInfo& createInfo,
+      enum class RHIMemoryPropertyFlag properties);
 
   static uint32_t findMemoryType(vk::PhysicalDevice physicalDevice,
                                  uint32_t typeFilter,

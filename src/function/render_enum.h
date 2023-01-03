@@ -5,8 +5,13 @@
 #ifndef SPARROWENGINE_RENDER_ENUM_H
 #define SPARROWENGINE_RENDER_ENUM_H
 #include <cstdint>
+#include <type_traits>
 
-enum class RHIShaderStageFlag : int {
+using RHIFlag = int;
+
+namespace Sparrow {
+
+enum class RHIShaderStageFlag : RHIFlag {
   Vertex = 0x00000001,
   TessellationControl = 0x00000002,
   TessellationEvaluation = 0x00000004,
@@ -32,12 +37,12 @@ enum class RHIShaderStageFlag : int {
   RaygenNV = RHIShaderStageFlag::RaygenKHR,
 };
 
-enum class RHIVertexInputRate : int {
+enum class RHIVertexInputRate : RHIFlag {
   Vertex = 0,
   Instance = 1,
 };
 
-enum class RHIFormat : int {
+enum class RHIFormat : RHIFlag {
   Undefined = 0,
   R4G4UnormPack8 = 1,
   R4G4B4A4UnormPack16 = 2,
@@ -293,7 +298,7 @@ enum class RHICullMode {
   FrontAndBack = 3,
 };
 
-enum class RHIAttachmentDescriptionFlag : int { MayAlias = 0x00000001 };
+enum class RHIAttachmentDescriptionFlag : RHIFlag { MayAlias = 0x00000001 };
 enum class RHIBlendFactor {
   Zero = 0,
   One = 1,
@@ -323,7 +328,7 @@ enum class RHIBlendOp {
   Max = 4,
   // TODO
 };
-enum class RHIColorComponentFlag : int {
+enum class RHIColorComponentFlag : RHIFlag {
   R = 0x00000001,
   G = 0x00000002,
   B = 0x00000004,
@@ -332,7 +337,7 @@ enum class RHIColorComponentFlag : int {
             RHIColorComponentFlag::B | RHIColorComponentFlag::A,
 };
 
-enum class RHISampleCount : int {
+enum class RHISampleCount : RHIFlag {
   Count1 = 0x00000001,
   Count2 = 0x00000002,
   Count4 = 0x00000004,
@@ -343,7 +348,7 @@ enum class RHISampleCount : int {
 };
 using RHISampleMask = uint32_t;
 
-enum class RHICompareOp : int {
+enum class RHICompareOp : RHIFlag {
   Never = 0,
   Less = 1,
   Equal = 2,
@@ -398,7 +403,7 @@ enum class RHIAttachmentStoreOp {
   NoneKHR = RHIAttachmentStoreOp::None,
   NoneQCOM = RHIAttachmentStoreOp::None,
 };
-enum class RHISubpassDescriptionFlag : int {
+enum class RHISubpassDescriptionFlag : RHIFlag {
   PerViewAttributesNVX = 0x00000001,
   PerViewPositionXOnlyNVX = 0x00000002,
   FragmentRegionQCOM = 0x00000004,
@@ -445,15 +450,15 @@ enum class RHIPipelineBindPoint {
   RayTracingNV = RHIPipelineBindPoint::RayTracingKHR
 };
 
-enum class RHIAccessFlag : int {
+enum class RHIAccessFlag : RHIFlag {
   // TODO
 };
 
-enum class RHIPipelineStageFlag : int {
+enum class RHIPipelineStageFlag : RHIFlag {
   // TODO
 };
 
-enum class RHIDependencyFlag : int {
+enum class RHIDependencyFlag : RHIFlag {
   ByRegion = 0x00000001,
   DeviceGroup = 0x00000004,
   ViewLocal = 0x00000002,
@@ -462,13 +467,13 @@ enum class RHIDependencyFlag : int {
   ViewLocalKHR = RHIDependencyFlag::ViewLocal,
 };
 
-enum class RHICommandBufferUsageFlag : int {
+enum class RHICommandBufferUsageFlag : RHIFlag {
   OneTimeSubmit = 0x00000001,
   RenderPassContinue = 0x00000002,
   SimultaneousUse = 0x00000004,
 };
-enum class RHIQueryControlFlag : int { Precise = 0x00000001 };
-enum class RHIQueryPipelineStatisticFlag : int {
+enum class RHIQueryControlFlag : RHIFlag { Precise = 0x00000001 };
+enum class RHIQueryPipelineStatisticFlag : RHIFlag {
   InputAssemblyVertices = 0x00000001,
   InputAssemblyPrimitives = 0x00000002,
   VertexShaderInvocations = 0x00000004,
@@ -489,7 +494,7 @@ enum class RHISubpassContents {
   SecondaryCommandBuffers = 1,
 };
 
-enum class RHIBufferUsageFlag : int {
+enum class RHIBufferUsageFlag : RHIFlag {
   TransferSrc = 0x00000001,
   TransferDst = 0x00000002,
   UniformTexelBuffer = 0x00000004,
@@ -512,4 +517,54 @@ enum class RHIBufferUsageFlag : int {
 };
 
 enum class RHISharingMode { Exclusive = 0, Concurrent = 1 };
+
+enum class RHIMemoryPropertyFlag : RHIFlag {
+  DeviceLocal = 0x00000001,
+  HostVisible = 0x00000002,
+  HostCoherent = 0x00000004,
+  HostCached = 0x00000008,
+  LazilyAllocated = 0x00000010,
+  Protected = 0x00000020,
+  DeviceCoherentAMD = 0x00000040,
+  DeviceUncachedAMD = 0x00000080,
+  RdmaCapableNV = 0x00000100,
+};
+
+template <typename EnumType>
+struct RHIFlagEnum : public std::false_type {};
+
+template <typename T>
+concept IsRHIFlag = std::is_base_of_v<std::true_type, RHIFlagEnum<T>>;
+
+template <typename EnumType>
+  requires IsRHIFlag<EnumType>
+constexpr EnumType operator&(EnumType l, EnumType r) {
+  return static_cast<EnumType>(
+      static_cast<std::underlying_type_t<EnumType>>(l) &
+      static_cast<std::underlying_type_t<EnumType>>(r));
+}
+template <typename EnumType>
+  requires IsRHIFlag<EnumType>
+constexpr EnumType operator|(EnumType l, EnumType r) {
+  return static_cast<EnumType>(
+      static_cast<std::underlying_type_t<EnumType>>(l) |
+      static_cast<std::underlying_type_t<EnumType>>(r));
+}
+
+#define DEF_RHI_FLAG_ENUM_TYPE(Type) \
+  template <>                        \
+  struct RHIFlagEnum<Type> : public std::true_type {};
+DEF_RHI_FLAG_ENUM_TYPE(RHIShaderStageFlag);
+DEF_RHI_FLAG_ENUM_TYPE(RHIAttachmentDescriptionFlag);
+DEF_RHI_FLAG_ENUM_TYPE(RHIColorComponentFlag);
+DEF_RHI_FLAG_ENUM_TYPE(RHISubpassDescriptionFlag);
+DEF_RHI_FLAG_ENUM_TYPE(RHIAccessFlag);
+DEF_RHI_FLAG_ENUM_TYPE(RHIPipelineStageFlag);
+DEF_RHI_FLAG_ENUM_TYPE(RHIDependencyFlag);
+DEF_RHI_FLAG_ENUM_TYPE(RHICommandBufferUsageFlag);
+DEF_RHI_FLAG_ENUM_TYPE(RHIQueryControlFlag);
+DEF_RHI_FLAG_ENUM_TYPE(RHIQueryPipelineStatisticFlag);
+DEF_RHI_FLAG_ENUM_TYPE(RHIBufferUsageFlag);
+DEF_RHI_FLAG_ENUM_TYPE(RHIMemoryPropertyFlag);
+}  // namespace Sparrow
 #endif

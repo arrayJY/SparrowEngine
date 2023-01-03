@@ -525,9 +525,10 @@ std::unique_ptr<RHIPipelineLayout> VulkanRHI::createPipelineLayout(
 }
 
 std::tuple<std::unique_ptr<RHIBuffer>, std::unique_ptr<RHIDeviceMemory>>
-VulkanRHI::createBuffer(const RHIBufferCreateInfo& createInfo) {
+VulkanRHI::createBuffer(const RHIBufferCreateInfo& createInfo,
+                        RHIMemoryPropertyFlag properties) {
   auto [vkBuffer, vkDeviceMemory] =
-      VulkanUtils::createBuffer(gpu, device, createInfo);
+      VulkanUtils::createBuffer(gpu, device, createInfo, properties);
 
   auto buffer = std::make_unique<VulkanBuffer>();
   auto deviceMemory = std::make_unique<VulkanDeviceMemory>();
@@ -587,6 +588,27 @@ bool VulkanRHI::beginCommandBuffer(
   return true;
 }
 
+std::unique_ptr<RHICommandBuffer> VulkanRHI::beginOneTimeCommandBuffer() {
+  auto allocInfo = vk::CommandBufferAllocateInfo()
+                       .setLevel(vk::CommandBufferLevel::ePrimary)
+                       .setCommandPool(commandPool)
+                       .setCommandBufferCount(1);
+  vk::CommandBuffer vkCommandBuffer;
+  if (device.allocateCommandBuffers(&allocInfo, &vkCommandBuffer) !=
+      vk::Result::eSuccess) {
+    std::cerr << "VulkanRHI::beginOneTimeCommandBuffer allocateCommandBuffers "
+                 "failed.\n";
+    return nullptr;
+  }
+  auto beginInfo = vk::CommandBufferBeginInfo().setFlags(
+      vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+  vkCommandBuffer.begin(beginInfo);
+
+  auto commandBuffer = std::make_unique<VulkanCommandBuffer>();
+  commandBuffer->setResource(vkCommandBuffer);
+  return commandBuffer;
+}
+
 bool VulkanRHI::endCommandBuffer(RHICommandBuffer* commandBuffer) {
   auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
   try {
@@ -595,6 +617,23 @@ bool VulkanRHI::endCommandBuffer(RHICommandBuffer* commandBuffer) {
     std::cerr << "EndCommandBuffer failed.";
     return false;
   }
+  return true;
+}
+
+bool VulkanRHI::endOneTimeCommandBuffer(RHICommandBuffer* commandBuffer) {
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
+  vkCommandBuffer.end();
+
+  auto submitInfo =
+      vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(
+          &vkCommandBuffer);
+  if (presentQueue.submit(1, &submitInfo, nullptr) != vk::Result::eSuccess) {
+    std::cerr << "VulkanRHI::endOneTimeCommandBuffer queueSubmit failed.\n";
+    return false;
+  }
+  presentQueue.waitIdle();
+  device.free(commandPool, 1, &vkCommandBuffer);
+
   return true;
 }
 
@@ -673,6 +712,17 @@ void VulkanRHI::cmdSetScissor(RHICommandBuffer* commandBuffer,
   auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
   vkCommandBuffer.setScissor(firstScissor, scissorCount,
                              Cast<vk::Rect2D>(pScissors));
+}
+
+void VulkanRHI::cmdCopyBuffer(RHICommandBuffer* commandBuffer,
+                              RHIBuffer* srcBuffer,
+                              RHIBuffer* dstBuffer,
+                              std::span<RHIBufferCopy> copyRegions) {
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
+  auto vkSrcBuffer = GetResource<VulkanBuffer>(srcBuffer);
+  auto vkDstBuffer = GetResource<VulkanBuffer>(dstBuffer);
+  vkCommandBuffer.copyBuffer(vkSrcBuffer, vkDstBuffer, copyRegions.size(),
+                             Cast<vk::BufferCopy>(copyRegions.data()));
 }
 
 void VulkanRHI::submitRendering() {
