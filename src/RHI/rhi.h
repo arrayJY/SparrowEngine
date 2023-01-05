@@ -40,6 +40,11 @@ class RHI {
       RHIDescriptorSetLayoutCreateInfo& createInfo) = 0;
   virtual void destoryDescriptorSetLayout(
       RHIDescriptorSetLayout* descriptorSetLayout) = 0;
+  virtual std::vector<std::unique_ptr<RHIDescriptorSet>> allocateDescriptorSets(
+      const RHIDescriptorSetAllocateInfo& allocateInfo) = 0;
+
+  /*** Update ***/
+  virtual void updateDescriptorSets(std::span<RHIWriteDescriptorSet> writeDescritorSets);
 
   /*** Query ***/
   virtual uint8_t getMaxFramesInFlight() = 0;

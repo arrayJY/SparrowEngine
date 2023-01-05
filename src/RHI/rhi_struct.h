@@ -26,7 +26,10 @@ struct RHICommandBufferInheritanceInfo;
 template <typename T, std::size_t Size>
 using RHIArray = std::array<T, Size>;
 
-#pragma region Classes
+/*** Classes ***/
+#define DEF_RHI_RESOURCE_CLASS(ClassName) \
+  class RHI##ClassName {};                \
+  class RHI##ClassName##s {};
 
 class RHIPipeline {};
 class RHIShader {};
@@ -36,11 +39,12 @@ class RHIFramebuffer {};
 class RHICommandBuffer {};
 class RHIImageView {};
 class RHIBuffer {};
+class RHIBufferView {};
 class RHIDeviceMemory {};
+DEF_RHI_RESOURCE_CLASS(DescriptorSet);
 class RHIDescriptorSetLayout {};
+class RHIDescriptorPool {};
 class RHISampler {};
-
-#pragma endregion
 
 #pragma region Pipeline
 
@@ -371,6 +375,35 @@ struct RHIDescriptorSetLayoutBinding {
 struct RHIDescriptorSetLayoutCreateInfo {
   uint32_t bindingCount = {};
   const RHIDescriptorSetLayoutBinding* bindings = {};
+};
+
+struct RHIDescriptorSetAllocateInfo {
+  RHIDescriptorPool descriptorPool = {};
+  uint32_t descriptorSetCount = {};
+  const RHIDescriptorSetLayout* setLayouts = {};
+};
+
+struct RHIDescriptorImageInfo {
+  RHISampler sampler = {};
+  RHIImageView imageView = {};
+  RHIImageLayout imageLayout = RHIImageLayout::Undefined;
+};
+
+struct RHIDescriptorBufferInfo {
+  RHIBuffer* buffer = {};
+  RHIDeviceSize offset = {};
+  RHIDeviceSize range = {};
+};
+
+struct RHIWriteDescriptorSet {
+  RHIDescriptorSet* dstSet = {};
+  uint32_t dstBinding = {};
+  uint32_t dstArrayElement = {};
+  uint32_t descriptorCount = {};
+  RHIDescriptorType descriptorType = RHIDescriptorType::Sampler;
+  const RHIDescriptorImageInfo* imageInfo = {};
+  const RHIDescriptorBufferInfo* bufferInfo = {};
+  const RHIBufferView* texelBufferView = {};
 };
 
 }  // namespace Sparrow

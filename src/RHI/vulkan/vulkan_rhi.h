@@ -57,6 +57,12 @@ class VulkanRHI : public RHI {
       RHIDescriptorSetLayoutCreateInfo& createInfo) override;
   void destoryDescriptorSetLayout(
       RHIDescriptorSetLayout* descriptorSetLayout) override;
+  std::vector<std::unique_ptr<RHIDescriptorSet>> allocateDescriptorSets(
+      const RHIDescriptorSetAllocateInfo& allocateInfo) override;
+
+  /*** Update ***/
+  void updateDescriptorSets(
+      std::span<RHIWriteDescriptorSet> writeDescritorSets) override;
 
   /* Query */
   uint8_t getMaxFramesInFlight() override;

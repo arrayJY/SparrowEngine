@@ -567,6 +567,65 @@ void VulkanRHI::destoryDescriptorSetLayout(
       GetResource<VulkanDescriptorSetLayout>(descriptorSetLayout));
 }
 
+std::vector<std::unique_ptr<RHIDescriptorSet>>
+VulkanRHI::allocateDescriptorSets(
+    const RHIDescriptorSetAllocateInfo& allocateInfo) {
+  auto descriptorSets = std::vector<std::unique_ptr<RHIDescriptorSet>>(
+      allocateInfo.descriptorSetCount);
+
+  for (auto i = 0; i < allocateInfo.descriptorSetCount; i++) {
+    auto descriptorSetsAllocateInfo =
+        vk::DescriptorSetAllocateInfo()
+            .setDescriptorPool(descriptorPool)
+            .setDescriptorSetCount(1)
+            .setPSetLayouts(
+                Cast<vk::DescriptorSetLayout>(&allocateInfo.setLayouts[i]));
+    vk::DescriptorSet vkDescriptSet;
+    if (device.allocateDescriptorSets(&descriptorSetsAllocateInfo,
+                                      &vkDescriptSet) != vk::Result::eSuccess) {
+      throw std::runtime_error(
+          "VulkanRHI::allocateDescritorSets AllocateDescriptorSets failed.\n");
+    }
+    auto descripotSet = std::make_unique<VulkanDescriptorSet>();
+    descripotSet->setResource(vkDescriptSet);
+    descriptorSets[i] = std::move(descripotSet);
+  }
+
+  return descriptorSets;
+}
+
+void VulkanRHI::updateDescriptorSets(
+    std::span<RHIWriteDescriptorSet> writeDescritorSets) {
+  const auto descriptorCount = writeDescritorSets.size();
+  std::vector<vk::DescriptorBufferInfo> vkDescriptorBufferInfos(
+      descriptorCount);
+  std::vector<vk::WriteDescriptorSet> vkWriteDescriptorSets(descriptorCount);
+
+  for (auto i = 0; i < descriptorCount; i++) {
+    const auto& bufferInfo = writeDescritorSets[i].bufferInfo;
+    vkDescriptorBufferInfos[i] =
+        vk::DescriptorBufferInfo()
+            .setBuffer(GetResource<VulkanBuffer>(bufferInfo->buffer))
+            .setOffset(bufferInfo->offset)
+            .setRange(bufferInfo->range);
+
+    const auto& descriptorSet = writeDescritorSets[i];
+    vkWriteDescriptorSets[i] =
+        vk::WriteDescriptorSet()
+            .setDstSet(GetResource<VulkanDescriptorSet>(descriptorSet.dstSet))
+            .setDstBinding(descriptorSet.dstBinding)
+            .setDstArrayElement(descriptorSet.dstArrayElement)
+            .setDescriptorType(
+                Cast<vk::DescriptorType>(descriptorSet.descriptorType))
+            .setPBufferInfo(&vkDescriptorBufferInfos[i])
+            .setPImageInfo(nullptr)        // TODO
+            .setPTexelBufferView(nullptr)  // TODO
+        ;
+  }
+  device.updateDescriptorSets(vkWriteDescriptorSets.size(),
+                              vkWriteDescriptorSets.data(), 0, nullptr);
+}
+
 uint8_t VulkanRHI::getMaxFramesInFlight() {
   return MAX_FRAMES_IN_FLIGHT;
 }
@@ -813,7 +872,6 @@ void VulkanRHI::submitRendering() {
     std::cerr << "QueuePresentKHR failed.";
     return;
   }
-
   currentFrameIndex = (currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 

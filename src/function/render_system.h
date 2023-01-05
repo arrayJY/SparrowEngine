@@ -37,6 +37,10 @@ class RenderSystem {
   std::tuple<std::vector<std::unique_ptr<RHIBuffer>>,
              std::vector<std::unique_ptr<RHIDeviceMemory>>>
   createUniformBuffers();
+  std::vector<std::unique_ptr<RHIBuffer>> uniformBuffers;
+  std::vector<std::unique_ptr<RHIDeviceMemory>> uniformBufferMemories;
+
+  void updateUniformBuffer(RHIDeviceMemory* bufferMemory);
 };
 
 }  // namespace Sparrow

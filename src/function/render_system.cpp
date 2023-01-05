@@ -12,6 +12,9 @@
 #include "RHI/vulkan/vulkan_utils.h"
 #include "function/window_system.h"
 #include "render_mesh.h"
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace Sparrow {
 void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
@@ -52,8 +55,9 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .primitiveRestartEnabled = RHIFalse,
   };
 
-  auto swapChainInfo = rhi->getSwapChainInfo();
-  auto currentFrameIndex = rhi->getCurrentFrameIndex();
+  const auto swapChainInfo = rhi->getSwapChainInfo();
+  const auto currentFrameIndex = rhi->getCurrentFrameIndex();
+  const auto maxFrameInFlight = rhi->getMaxFramesInFlight();
 
   float swapChainWidth = swapChainInfo.extent.width;
   float swapChainHeight = swapChainInfo.extent.height;
@@ -151,20 +155,24 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .bindingCount = 1,
       .bindings = &uboLayoutBinding,
   };
-  auto desciptorSetLayout =
+  auto descriptorSetLayout =
       rhi->createDescriptorSetLayout(descriptorSetLayoutCreateInfo);
+  auto descriptorSets =
+      rhi->allocateDescriptorSets(RHIDescriptorSetAllocateInfo{
+          .descriptorPool = RHIDescriptorPool{},  // TODO: use outer resource
+          .descriptorSetCount = maxFrameInFlight,
+          .setLayouts = descriptorSetLayout.get(),
+      });
 
   auto pipelineLayoutCreateInfo = RHIPipelineLayoutCreateInfo{
       .setLayoutCount = 1,
-      .setLayouts = desciptorSetLayout.get(),
+      .setLayouts = descriptorSetLayout.get(),
       .pushConstantRangeCount = 0,
       .pushConstantRanges = nullptr,
   };
 
   auto renderPass = rhi->createRenderPass(renderPassCreateInfo);
   auto piplineLayout = rhi->createPipelineLayout(pipelineLayoutCreateInfo);
-
-  rhi->destoryDescriptorSetLayout(desciptorSetLayout.get());
 
   auto framebufferCreateInfo = RHIFramebufferCreateInfo{
       .renderPass = renderPass.get(),
@@ -203,6 +211,34 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
 
   auto [vertexBuffer, vertexBufferMemory] = createVertexBuffer(vertices);
   auto [indexBuffer, indexBufferMemory] = createIndexBuffer(indices);
+  auto [_uniformBuffers, _uniformBufferMemories] = createUniformBuffers();
+  uniformBuffers = std::move(_uniformBuffers);
+  uniformBufferMemories = std::move(_uniformBufferMemories);
+
+  std::vector<RHIDescriptorBufferInfo> bufferInfos;
+  std::vector<RHIWriteDescriptorSet> writeDescriptorSets;
+  bufferInfos.reserve(maxFrameInFlight);
+  writeDescriptorSets.reserve(maxFrameInFlight);
+
+  for (auto i = 0; i < maxFrameInFlight; i++) {
+    bufferInfos.push_back(RHIDescriptorBufferInfo{
+        .buffer = uniformBuffers[i].get(),
+        .offset = 0,
+        .range = sizeof(Transform),
+    });
+
+    writeDescriptorSets.push_back(RHIWriteDescriptorSet{
+        .dstSet = descriptorSets[i].get(),
+        .dstBinding = 0,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = RHIDescriptorType::UniformBuffer,
+        .imageInfo = nullptr,
+        .bufferInfo = &bufferInfos[i],
+        .texelBufferView = nullptr,
+    });
+  }
+  rhi->updateDescriptorSets(writeDescriptorSets);
 
   auto graphicsPipeline =
       rhi->createGraphicsPipeline(grpahicPipelineCreateInfo);
@@ -242,7 +278,9 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
 
   rhi->submitRendering();
 }
-void RenderSystem::tick(float deltaTime) {}
+void RenderSystem::tick(float deltaTime) {
+  updateUniformBuffer(uniformBufferMemories[rhi->getCurrentFrameIndex()].get());
+}
 
 std::vector<char> RenderSystem::readFile(const std::string& filename) {
   char const* shader_dir = SHADER_DIR;
@@ -347,12 +385,14 @@ std::tuple<std::vector<std::unique_ptr<RHIBuffer>>,
 RenderSystem::createUniformBuffers() {
   std::vector<std::unique_ptr<RHIBuffer>> uniformBuffers;
   std::vector<std::unique_ptr<RHIDeviceMemory>> uniformBufferMemorys;
+  std::vector<void*> uniformBuffersMapped;
 
   RHIDeviceSize bufferSize = sizeof(Transform);
   const auto maxFramesInFlight = rhi->getMaxFramesInFlight();
 
   uniformBuffers.resize(maxFramesInFlight);
   uniformBufferMemorys.resize(maxFramesInFlight);
+  uniformBuffersMapped.resize(maxFramesInFlight);
 
   auto bufferCreateInfo = RHIBufferCreateInfo{
       .size = bufferSize,
@@ -363,6 +403,7 @@ RenderSystem::createUniformBuffers() {
     auto [buffer, deviceMemory] = rhi->createBuffer(
         bufferCreateInfo, RHIMemoryPropertyFlag::HostVisible |
                               RHIMemoryPropertyFlag::HostCoherent);
+    uniformBuffersMapped[i] = rhi->mapMemory(deviceMemory.get(), 0, bufferSize);
     uniformBuffers[i] = std::move(buffer);
     uniformBufferMemorys[i] = std::move(deviceMemory);
   }
@@ -370,5 +411,29 @@ RenderSystem::createUniformBuffers() {
   return std::make_tuple(std::move(uniformBuffers),
                          std::move(uniformBufferMemorys));
 }
+
+void RenderSystem::updateUniformBuffer(RHIDeviceMemory* bufferMemory) {
+  static auto startTime = std::chrono::high_resolution_clock::now();
+  auto currentTime = std::chrono::high_resolution_clock::now();
+  auto swapChainInfo = rhi->getSwapChainInfo();
+  float time = std::chrono::duration<float, std::chrono::seconds::period>(
+                   currentTime - startTime)
+                   .count();
+  auto ubo = Transform{
+      .model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f),
+                           glm::vec3(0.0f, 0.0f, 1.0f)),
+      .view =
+          glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+                      glm::vec3(0.0f, 0.0f, 1.0f)),
+      .projection = glm::perspective(
+          glm::radians(45.0f),
+          swapChainInfo.extent.width / (float)swapChainInfo.extent.height, 0.1f,
+          10.0f),
+  };
+  ubo.projection[1][1] *= -1;
+  auto mappedMemory = rhi->mapMemory(bufferMemory, 0, sizeof(ubo));
+  std::memcpy(mappedMemory, &ubo, sizeof(ubo));
+  rhi->unmapMemory(bufferMemory);
+};
 
 }  // namespace Sparrow
