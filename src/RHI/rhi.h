@@ -44,7 +44,8 @@ class RHI {
       const RHIDescriptorSetAllocateInfo& allocateInfo) = 0;
 
   /*** Update ***/
-  virtual void updateDescriptorSets(std::span<RHIWriteDescriptorSet> writeDescritorSets);
+  virtual void updateDescriptorSets(
+      std::span<RHIWriteDescriptorSet> writeDescritorSets) = 0;
 
   /*** Query ***/
   virtual uint8_t getMaxFramesInFlight() = 0;
@@ -78,6 +79,14 @@ class RHI {
                                   RHIBuffer* buffer,
                                   RHIDeviceSize offset,
                                   RHIIndexType indexType) = 0;
+  virtual void cmdBindDescriptorSets(RHICommandBuffer* commandBuffer,
+                                     RHIPipelineBindPoint pipelineBindPoint,
+                                     const RHIPipelineLayout* layout,
+                                     uint32_t firstSet,
+                                     uint32_t descriptorSetCount,
+                                     const RHIDescriptorSet* descriptorSets,
+                                     uint32_t dynamicOffsetCount,
+                                     const uint32_t* dynamicOffsets) = 0;
   virtual void cmdDraw(RHICommandBuffer* commandBuffer,
                        uint32_t vertexCount,
                        uint32_t instanceCount,

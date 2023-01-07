@@ -26,8 +26,8 @@ R* CastResource(T* value) {
   return static_cast<R*>(value);
 }
 template <typename ResourceType, typename T>
-inline typename ResourceType::Type GetResource(T* res) {
-  return static_cast<ResourceType*>(res)->getResource();
+inline typename ResourceType::Type GetResource(const T* res) {
+  return static_cast<const ResourceType*>(res)->getResource();
 }
 
 template <typename T, typename U>

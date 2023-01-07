@@ -162,7 +162,7 @@ void VulkanRHI::createCommandBuffers() {
   auto allocInfo = vk::CommandBufferAllocateInfo()
                        .setCommandPool(commandPool)
                        .setLevel(vk::CommandBufferLevel::ePrimary)
-                       .setCommandBufferCount(1);
+                       .setCommandBufferCount(MAX_FRAMES_IN_FLIGHT);
   commandBuffers = device.allocateCommandBuffers(allocInfo);
 }
 
@@ -579,16 +579,16 @@ VulkanRHI::allocateDescriptorSets(
             .setDescriptorPool(descriptorPool)
             .setDescriptorSetCount(1)
             .setPSetLayouts(
-                Cast<vk::DescriptorSetLayout>(&allocateInfo.setLayouts[i]));
-    vk::DescriptorSet vkDescriptSet;
+                Cast<vk::DescriptorSetLayout>(allocateInfo.setLayouts));
+    vk::DescriptorSet vkDescriptorSet;
     if (device.allocateDescriptorSets(&descriptorSetsAllocateInfo,
-                                      &vkDescriptSet) != vk::Result::eSuccess) {
+                                      &vkDescriptorSet) != vk::Result::eSuccess) {
       throw std::runtime_error(
           "VulkanRHI::allocateDescritorSets AllocateDescriptorSets failed.\n");
     }
-    auto descripotSet = std::make_unique<VulkanDescriptorSet>();
-    descripotSet->setResource(vkDescriptSet);
-    descriptorSets[i] = std::move(descripotSet);
+    auto descriptorSet = std::make_unique<VulkanDescriptorSet>();
+    descriptorSet->setResource(vkDescriptorSet);
+    descriptorSets[i] = std::move(descriptorSet);
   }
 
   return descriptorSets;
@@ -615,6 +615,7 @@ void VulkanRHI::updateDescriptorSets(
             .setDstSet(GetResource<VulkanDescriptorSet>(descriptorSet.dstSet))
             .setDstBinding(descriptorSet.dstBinding)
             .setDstArrayElement(descriptorSet.dstArrayElement)
+            .setDescriptorCount(1)
             .setDescriptorType(
                 Cast<vk::DescriptorType>(descriptorSet.descriptorType))
             .setPBufferInfo(&vkDescriptorBufferInfos[i])
@@ -781,6 +782,26 @@ void VulkanRHI::cmdBindIndexBuffer(RHICommandBuffer* commandBuffer,
   auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
   vkCommandBuffer.bindIndexBuffer(GetResource<VulkanBuffer>(buffer), offset,
                                   Cast<vk::IndexType>(indexType));
+}
+
+void VulkanRHI::cmdBindDescriptorSets(RHICommandBuffer* commandBuffer,
+                                      RHIPipelineBindPoint pipelineBindPoint,
+                                      const RHIPipelineLayout* layout,
+                                      uint32_t firstSet,
+                                      uint32_t descriptorSetCount,
+                                      const RHIDescriptorSet* descriptorSets,
+                                      uint32_t dynamicOffsetCount,
+                                      const uint32_t* dynamicOffsets) {
+  std::vector<vk::DescriptorSet> vkDesciptorSets(descriptorSetCount);
+  for (auto i = 0; i < descriptorSetCount; i++) {
+    vkDesciptorSets[i] = GetResource<VulkanDescriptorSet>(descriptorSets);
+  }
+
+  auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
+  vkCommandBuffer.bindDescriptorSets(
+      Cast<vk::PipelineBindPoint>(pipelineBindPoint),
+      GetResource<VulkanPipelineLayout>(layout), firstSet, descriptorSetCount,
+      vkDesciptorSets.data(), dynamicOffsetCount, dynamicOffsets);
 }
 
 void VulkanRHI::cmdDraw(RHICommandBuffer* commandBuffer,

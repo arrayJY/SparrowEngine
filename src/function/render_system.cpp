@@ -25,8 +25,8 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   auto vertexCode = readFile("shader.vert.spv");
   auto fragmentCode = readFile("shader.frag.spv");
 
-  auto vertexShader = rhi->createShaderModule(vertexCode);
-  auto fragmentShader = rhi->createShaderModule(fragmentCode);
+  vertexShader = rhi->createShaderModule(vertexCode);
+  fragmentShader = rhi->createShaderModule(fragmentCode);
 
   RHIPipelineShaderStageCreateInfo vertexPipelineShaderStageCreateInfo = {
       .stage = RHIShaderStageFlag::Vertex,
@@ -86,7 +86,7 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .rasterizerDiscardEnable = RHIFalse,
       .polygonMode = RHIPolygonMode::Fill,
       .cullMode = RHICullMode::Back,
-      .frontFace = RHIFrontFace::Clockwise,
+      .frontFace = RHIFrontFace::CounterClockwise,
       .depthBiasEnable = RHIFalse,
       .depthBiasConstantFactor = 0.0f,
       .depthBiasClamp = 0.0f,
@@ -155,14 +155,13 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .bindingCount = 1,
       .bindings = &uboLayoutBinding,
   };
-  auto descriptorSetLayout =
+  descriptorSetLayout =
       rhi->createDescriptorSetLayout(descriptorSetLayoutCreateInfo);
-  auto descriptorSets =
-      rhi->allocateDescriptorSets(RHIDescriptorSetAllocateInfo{
-          .descriptorPool = RHIDescriptorPool{},  // TODO: use outer resource
-          .descriptorSetCount = maxFrameInFlight,
-          .setLayouts = descriptorSetLayout.get(),
-      });
+  descriptorSets = rhi->allocateDescriptorSets(RHIDescriptorSetAllocateInfo{
+      .descriptorPool = RHIDescriptorPool{},  // TODO: use outer resource
+      .descriptorSetCount = maxFrameInFlight,
+      .setLayouts = descriptorSetLayout.get(),
+  });
 
   auto pipelineLayoutCreateInfo = RHIPipelineLayoutCreateInfo{
       .setLayoutCount = 1,
@@ -171,8 +170,8 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .pushConstantRanges = nullptr,
   };
 
-  auto renderPass = rhi->createRenderPass(renderPassCreateInfo);
-  auto piplineLayout = rhi->createPipelineLayout(pipelineLayoutCreateInfo);
+  renderPass = rhi->createRenderPass(renderPassCreateInfo);
+  piplineLayout = rhi->createPipelineLayout(pipelineLayoutCreateInfo);
 
   auto framebufferCreateInfo = RHIFramebufferCreateInfo{
       .renderPass = renderPass.get(),
@@ -183,7 +182,7 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .layers = 1,
   };
 
-  auto framebuffer = rhi->createFramebuffer(framebufferCreateInfo);
+  framebuffer = rhi->createFramebuffer(framebufferCreateInfo);
 
   auto grpahicPipelineCreateInfo = RHIGraphicsPipelineCreateInfo{
       .stageCount = 2,
@@ -209,9 +208,13 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
                                   {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
   std::vector<uint16_t> indices = {0, 1, 2, 2, 3, 0};
 
-  auto [vertexBuffer, vertexBufferMemory] = createVertexBuffer(vertices);
-  auto [indexBuffer, indexBufferMemory] = createIndexBuffer(indices);
+  auto [_vertexBuffer, _vertexBufferMemory] = createVertexBuffer(vertices);
+  auto [_indexBuffer, _indexBufferMemory] = createIndexBuffer(indices);
   auto [_uniformBuffers, _uniformBufferMemories] = createUniformBuffers();
+  vertexBuffer = std::move(_vertexBuffer);
+  vertexBufferMemory = std::move(_vertexBufferMemory);
+  indexBuffer = std::move(_indexBuffer);
+  indexBufferMemory = std::move(_indexBufferMemory);
   uniformBuffers = std::move(_uniformBuffers);
   uniformBufferMemories = std::move(_uniformBufferMemories);
 
@@ -239,9 +242,9 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
     });
   }
   rhi->updateDescriptorSets(writeDescriptorSets);
+  updateUniformBuffer(uniformBufferMemories[rhi->getCurrentFrameIndex()].get());
 
-  auto graphicsPipeline =
-      rhi->createGraphicsPipeline(grpahicPipelineCreateInfo);
+  graphicsPipeline = rhi->createGraphicsPipeline(grpahicPipelineCreateInfo);
 
   auto commandBuffer = rhi->getCurrentCommandBuffer();
 
@@ -269,6 +272,9 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   rhi->cmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
   rhi->cmdBindIndexBuffer(commandBuffer, indexBuffer.get(), 0,
                           RHIIndexType::Uint16);
+  rhi->cmdBindDescriptorSets(
+      commandBuffer, RHIPipelineBindPoint::Graphics, piplineLayout.get(), 0, 1,
+      descriptorSets[currentFrameIndex].get(), 0, nullptr);
   rhi->cmdSetViewport(commandBuffer, 0, 1, &viewport);
   rhi->cmdSetScissor(commandBuffer, 0, 1, &scissor);
   //   rhi->cmdDraw(commandBuffer, 3, 1, 0, 0);
@@ -279,7 +285,8 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   rhi->submitRendering();
 }
 void RenderSystem::tick(float deltaTime) {
-  updateUniformBuffer(uniformBufferMemories[rhi->getCurrentFrameIndex()].get());
+   updateUniformBuffer(uniformBufferMemories[rhi->getCurrentFrameIndex()].get());
+   rhi->submitRendering();
 }
 
 std::vector<char> RenderSystem::readFile(const std::string& filename) {

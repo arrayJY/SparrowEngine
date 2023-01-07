@@ -23,7 +23,9 @@ void Engine::shutdown() {}
 
 void Engine::logicalTick(float deltaTime) {}
 
-void Engine::renderTick(float deltaTime) {}
+void Engine::renderTick(float deltaTime) {
+  gContext.renderSystem->tick(deltaTime);
+}
 
 float Engine::calcOneFrameDeltaTime() const {
   return 0.0;  // TODO

@@ -41,6 +41,17 @@ class RenderSystem {
   std::vector<std::unique_ptr<RHIDeviceMemory>> uniformBufferMemories;
 
   void updateUniformBuffer(RHIDeviceMemory* bufferMemory);
+
+  std::unique_ptr<RHIShader> vertexShader, fragmentShader;
+  std::unique_ptr<RHIDescriptorSetLayout> descriptorSetLayout;
+  std::vector<std::unique_ptr<RHIDescriptorSet>> descriptorSets;
+  std::unique_ptr<RHIRenderPass> renderPass;
+  std::unique_ptr<RHIPipelineLayout> piplineLayout;
+  std::unique_ptr<RHIFramebuffer> framebuffer;
+  std::unique_ptr<RHIPipeline> graphicsPipeline;
+  std::unique_ptr<RHIBuffer> indexBuffer, vertexBuffer;
+  std::unique_ptr<RHIDeviceMemory> indexBufferMemory, vertexBufferMemory;
+
 };
 
 }  // namespace Sparrow

@@ -95,11 +95,19 @@ class VulkanRHI : public RHI {
                           RHIBuffer* buffer,
                           RHIDeviceSize offset,
                           RHIIndexType indexType) override;
-  void cmdDraw(RHICommandBuffer* commandBuffer,
-               uint32_t vertexCount,
-               uint32_t instanceCount,
-               uint32_t firstVertex,
-               uint32_t firstInstance) override;
+  void cmdBindDescriptorSets(RHICommandBuffer* commandBuffer,
+                             RHIPipelineBindPoint pipelineBindPoint,
+                             const RHIPipelineLayout* layout,
+                             uint32_t firstSet,
+                             uint32_t descriptorSetCount,
+                             const RHIDescriptorSet* descriptorSets,
+                             uint32_t dynamicOffsetCount,
+                             const uint32_t* dynamicOffsets) override;
+      void cmdDraw(RHICommandBuffer* commandBuffer,
+                   uint32_t vertexCount,
+                   uint32_t instanceCount,
+                   uint32_t firstVertex,
+                   uint32_t firstInstance) override;
   void cmdDrawIndexed(RHICommandBuffer* commandBuffer,
                       uint32_t indexCount,
                       uint32_t instanceCount,
