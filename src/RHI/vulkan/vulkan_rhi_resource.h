@@ -42,6 +42,7 @@ DEF_VULKAN_RESOURCE_CLASS(CommandBuffer, vk::CommandBuffer);
 DEF_VULKAN_RESOURCE_CLASS(Framebuffer, vk::Framebuffer);
 DEF_VULKAN_RESOURCE_CLASS(ImageView, vk::ImageView);
 DEF_VULKAN_RESOURCE_CLASS(Buffer, vk::Buffer);
+DEF_VULKAN_RESOURCE_CLASS(Image, vk::Image);
 DEF_VULKAN_RESOURCE_CLASS(BufferView, vk::BufferView);
 DEF_VULKAN_RESOURCE_CLASS(DeviceMemory, vk::DeviceMemory);
 DEF_VULKAN_RESOURCE_CLASS(DescriptorSet, vk::DescriptorSet);

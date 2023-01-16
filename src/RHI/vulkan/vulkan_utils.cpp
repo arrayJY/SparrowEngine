@@ -43,7 +43,6 @@ void VulkanUtils::createImage(
                        .setMemoryTypeIndex(findMemoryType(
                            physicalDevice, memRequirements.memoryTypeBits,
                            memoryPropertyFlags));
-  ;
 
   deviceMemory = device.allocateMemory(allocInfo);
   device.bindImageMemory(image, deviceMemory, 0);

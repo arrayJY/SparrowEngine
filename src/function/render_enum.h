@@ -560,6 +560,58 @@ enum class RHIDescriptorType {
   MutableVALVE = RHIDescriptorType::MutableEXT
 };
 
+enum class RHIImageTiling {
+  Optimal = 0,
+  Linear = 1,
+  DrmFormatModifierEXT = 1000158000,
+};
+
+enum class RHIImageUsageFlag {
+  TransferSrc = 0x00000001,
+  TransferDst = 0x00000002,
+  Sampled = 0x00000004,
+  Storage = 0x00000008,
+  ColorAttachment = 0x00000010,
+  DepthStencilAttachment = 0x00000020,
+  TransientAttachment = 0x00000040,
+  InputAttachment = 0x00000080,
+  FragmentDensityMapEXT = 0x00000200,
+  FragmentShadingRateAttachmentKHR = 0x00000100,
+  AttachmentFeedbackLoopEXT = 0x00080000,
+  InvocationMaskHUAWEI = 0x00040000,
+  SampleWeightQCOM = 0x00100000,
+  SampleBlockMatchQCOM = 0x00200000,
+  ShadingRateImageNV = RHIImageUsageFlag::FragmentShadingRateAttachmentKHR,
+};
+
+
+enum class RHIImageCreateFlag {
+  SparseBinding = 0x00000001,
+  SparseResidency = 0x00000002,
+  SparseAliased = 0x00000004,
+  MutableFormat = 0x00000008,
+  CubeCompatible = 0x00000010,
+  Alias = 0x00000400,
+  SplitInstanceBindRegions = 0x00000040,
+  _2DArrayCompatible = 0x00000020,
+  BlockTexelViewCompatible = 0x00000080,
+  ExtendedUsage = 0x00000100,
+  Protected = 0x00000800,
+  Disjoint = 0x00000200,
+  CornerSampledNV = 0x00002000,
+  SampleLocationsCompatibleDepthEXT = 0x00001000,
+  SubsampledEXT = 0x00004000,
+  MultisampledRenderToSingleSampledEXT = 0x00040000,
+  _2DViewCompatibleEXT = 0x00020000,
+  FragmentDensityMapOffsetQCOM = 0x00008000,
+  _2DArrayCompatibleKHR = RHIImageCreateFlag::_2DArrayCompatible,
+  AliasKHR = RHIImageCreateFlag::Alias,
+  BlockTexelViewCompatibleKHR = RHIImageCreateFlag::BlockTexelViewCompatible,
+  DisjointKHR = RHIImageCreateFlag::Disjoint,
+  ExtendedUsageKHR = RHIImageCreateFlag::ExtendedUsage,
+  SplitInstanceBindRegionsKHR = RHIImageCreateFlag::SplitInstanceBindRegions,
+};
+
 template <typename EnumType>
 struct RHIFlagEnum : public std::false_type {};
 
@@ -596,5 +648,7 @@ DEF_RHI_FLAG_ENUM_TYPE(RHIQueryControlFlag);
 DEF_RHI_FLAG_ENUM_TYPE(RHIQueryPipelineStatisticFlag);
 DEF_RHI_FLAG_ENUM_TYPE(RHIBufferUsageFlag);
 DEF_RHI_FLAG_ENUM_TYPE(RHIMemoryPropertyFlag);
+DEF_RHI_FLAG_ENUM_TYPE(RHIImageUsageFlag);
+DEF_RHI_FLAG_ENUM_TYPE(RHIImageCreateFlag);
 }  // namespace Sparrow
 #endif

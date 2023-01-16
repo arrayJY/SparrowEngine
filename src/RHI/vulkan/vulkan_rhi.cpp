@@ -538,6 +538,25 @@ VulkanRHI::createBuffer(const RHIBufferCreateInfo& createInfo,
   return std::make_tuple(std::move(buffer), std::move(deviceMemory));
 }
 
+std::tuple<std::unique_ptr<RHIImage>, std::unique_ptr<RHIDeviceMemory>>
+VulkanRHI::createImage(const RHIImageCreateInfo& createInfo) {
+  vk::Image vkImage;
+  vk::DeviceMemory vkDeviceMemory;
+  VulkanUtils::createImage(
+      gpu, device, createInfo.width, createInfo.height,
+      Cast<vk::Format>(createInfo.format),
+      Cast<vk::ImageTiling>(createInfo.tiling),
+      Cast<vk::ImageUsageFlags>(createInfo.imageUsageFlags),
+      Cast<vk::MemoryPropertyFlags>(createInfo.memoryPropertyFlags),
+      Cast<vk::ImageCreateFlags>(createInfo.imageCreateFlags),
+      createInfo.arrayLayers, createInfo.mipLevels, vkImage, vkDeviceMemory);
+  auto image = std::make_unique<VulkanImage>();
+  auto deviceMemory = std::make_unique<VulkanDeviceMemory>();
+  image->setResource(vkImage);
+  deviceMemory->setResource(vkDeviceMemory);
+  return std::make_tuple(std::move(image), std::move(deviceMemory));
+}
+
 void VulkanRHI::destoryBuffer(RHIBuffer* buffer) {
   device.destroyBuffer(GetResource<VulkanBuffer>(buffer));
 }
@@ -582,7 +601,8 @@ VulkanRHI::allocateDescriptorSets(
                 Cast<vk::DescriptorSetLayout>(allocateInfo.setLayouts));
     vk::DescriptorSet vkDescriptorSet;
     if (device.allocateDescriptorSets(&descriptorSetsAllocateInfo,
-                                      &vkDescriptorSet) != vk::Result::eSuccess) {
+                                      &vkDescriptorSet) !=
+        vk::Result::eSuccess) {
       throw std::runtime_error(
           "VulkanRHI::allocateDescritorSets AllocateDescriptorSets failed.\n");
     }

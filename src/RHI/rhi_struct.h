@@ -37,6 +37,7 @@ class RHIPipelineLayout {};
 class RHIRenderPass {};
 class RHIFramebuffer {};
 class RHICommandBuffer {};
+class RHIImage {};
 class RHIImageView {};
 class RHIBuffer {};
 class RHIBufferView {};
@@ -404,6 +405,18 @@ struct RHIWriteDescriptorSet {
   const RHIDescriptorImageInfo* imageInfo = {};
   const RHIDescriptorBufferInfo* bufferInfo = {};
   const RHIBufferView* texelBufferView = {};
+};
+
+struct RHIImageCreateInfo {
+  uint32_t width;
+  uint32_t height;
+  RHIFormat format;
+  RHIImageTiling tiling;
+  RHIImageUsageFlag imageUsageFlags;
+  RHIMemoryPropertyFlag memoryPropertyFlags;
+  RHIImageCreateFlag imageCreateFlags;
+  uint32_t arrayLayers;
+  uint32_t mipLevels;
 };
 
 }  // namespace Sparrow

@@ -35,11 +35,11 @@ class RHI {
                      std::unique_ptr<RHIDeviceMemory>>
   createBuffer(const RHIBufferCreateInfo& createInfo,
                RHIMemoryPropertyFlag properties) = 0;
-  virtual void destoryBuffer(RHIBuffer* buffer) = 0;
+  virtual std::tuple<std::unique_ptr<RHIImage>,
+                     std::unique_ptr<RHIDeviceMemory>>
+  createImage(const RHIImageCreateInfo& createInfo) = 0;
   virtual std::unique_ptr<RHIDescriptorSetLayout> createDescriptorSetLayout(
       RHIDescriptorSetLayoutCreateInfo& createInfo) = 0;
-  virtual void destoryDescriptorSetLayout(
-      RHIDescriptorSetLayout* descriptorSetLayout) = 0;
   virtual std::vector<std::unique_ptr<RHIDescriptorSet>> allocateDescriptorSets(
       const RHIDescriptorSetAllocateInfo& allocateInfo) = 0;
 
@@ -53,6 +53,11 @@ class RHI {
   virtual RHISwapChainInfo getSwapChainInfo() = 0;
   virtual RHICommandBuffer* getCurrentCommandBuffer() = 0;
   virtual std::span<RHICommandBuffer> getCommandBuffers() = 0;
+
+  /*** Destory ***/
+  virtual void destoryBuffer(RHIBuffer* buffer) = 0;
+  virtual void destoryDescriptorSetLayout(
+      RHIDescriptorSetLayout* descriptorSetLayout) = 0;
 
   /*** Command ***/
   virtual bool beginCommandBuffer(

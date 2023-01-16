@@ -52,6 +52,8 @@ class VulkanRHI : public RHI {
   std::tuple<std::unique_ptr<RHIBuffer>, std::unique_ptr<RHIDeviceMemory>>
   createBuffer(const RHIBufferCreateInfo& createInfo,
                RHIMemoryPropertyFlag properties) override;
+  std::tuple<std::unique_ptr<RHIImage>, std::unique_ptr<RHIDeviceMemory>>
+  createImage(const RHIImageCreateInfo& createInfo) override;
   void destoryBuffer(RHIBuffer* buffer) override;
   std::unique_ptr<RHIDescriptorSetLayout> createDescriptorSetLayout(
       RHIDescriptorSetLayoutCreateInfo& createInfo) override;
@@ -103,11 +105,11 @@ class VulkanRHI : public RHI {
                              const RHIDescriptorSet* descriptorSets,
                              uint32_t dynamicOffsetCount,
                              const uint32_t* dynamicOffsets) override;
-      void cmdDraw(RHICommandBuffer* commandBuffer,
-                   uint32_t vertexCount,
-                   uint32_t instanceCount,
-                   uint32_t firstVertex,
-                   uint32_t firstInstance) override;
+  void cmdDraw(RHICommandBuffer* commandBuffer,
+               uint32_t vertexCount,
+               uint32_t instanceCount,
+               uint32_t firstVertex,
+               uint32_t firstInstance) override;
   void cmdDrawIndexed(RHICommandBuffer* commandBuffer,
                       uint32_t indexCount,
                       uint32_t instanceCount,
