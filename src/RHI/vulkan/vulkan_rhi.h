@@ -69,6 +69,7 @@ class VulkanRHI : public RHI {
   /* Query */
   uint8_t getMaxFramesInFlight() override;
   uint8_t getCurrentFrameIndex() override;
+  uint32_t getCurrentSwapChainImageIndex() override;
   RHISwapChainInfo getSwapChainInfo() override;
   RHICommandBuffer* getCurrentCommandBuffer() override;
   std::span<RHICommandBuffer> getCommandBuffers() override;
@@ -129,6 +130,8 @@ class VulkanRHI : public RHI {
                      RHIBuffer* dstBuffer,
                      std::span<RHIBufferCopy> copyRegions) override;
 
+  void beforePass() override;
+  void waitIdle() override;
   void submitRendering() override;
 
   /*** Memory ***/

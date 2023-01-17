@@ -13,6 +13,7 @@
 #include <GLFW/glfw3.h>
 #include "RHI/vulkan/vulkan_rhi_resource.h"
 #include "function/window_system.h"
+#include "utils/log.h"
 #include "vulkan_utils.h"
 
 namespace Sparrow {
@@ -247,7 +248,7 @@ void VulkanRHI::recreateSwapChain() {
 
   if (device.waitForFences(1, &isFrameInFlightFences[currentFrameIndex],
                            VK_TRUE, UINT64_MAX) != vk::Result::eSuccess) {
-    std::cerr << "WaitForFences failed.";
+    LOG_ERROR("WaitForFences failed.")
     return;
   }
 
@@ -329,7 +330,7 @@ std::unique_ptr<RHIShader> VulkanRHI::createShaderModule(
   vk::ShaderModule vkShaderModule;
   if (device.createShaderModule(&shaderModuleCreateInfo, nullptr,
                                 &vkShaderModule) != vk::Result::eSuccess) {
-    std::cerr << "CreateShaderModule failed.\n";
+    LOG_ERROR("CreateShaderModule failed.\n")
     return nullptr;
   }
   auto vulkanShader = std::make_unique<VulkanShader>();
@@ -655,6 +656,10 @@ uint8_t VulkanRHI::getCurrentFrameIndex() {
   return currentFrameIndex;
 }
 
+uint32_t VulkanRHI::getCurrentSwapChainImageIndex() {
+  return currentSwapChainImageIndex;
+}
+
 RHISwapChainInfo VulkanRHI::getSwapChainInfo() {
   return RHISwapChainInfo{
       .extent =
@@ -691,7 +696,7 @@ bool VulkanRHI::beginCommandBuffer(
   }
   auto vkCommandBuffer = GetResource<VulkanCommandBuffer>(commandBuffer);
   if (vkCommandBuffer.begin(&beginInfo) != vk::Result::eSuccess) {
-    std::cerr << "BeginCommandBuffer failed.";
+    LOG_ERROR("BeginCommandBuffer failed.")
     return false;
   }
   return true;
@@ -723,7 +728,7 @@ bool VulkanRHI::endCommandBuffer(RHICommandBuffer* commandBuffer) {
   try {
     vkCommandBuffer.end();
   } catch (std::runtime_error e) {
-    std::cerr << "EndCommandBuffer failed.";
+    LOG_ERROR("EndCommandBuffer failed.")
     return false;
   }
   return true;
@@ -737,7 +742,7 @@ bool VulkanRHI::endOneTimeCommandBuffer(RHICommandBuffer* commandBuffer) {
       vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(
           &vkCommandBuffer);
   if (presentQueue.submit(1, &submitInfo, nullptr) != vk::Result::eSuccess) {
-    std::cerr << "VulkanRHI::endOneTimeCommandBuffer queueSubmit failed.\n";
+    LOG_ERROR("VulkanRHI::endOneTimeCommandBuffer queueSubmit failed.\n")
     return false;
   }
   presentQueue.waitIdle();
@@ -874,12 +879,40 @@ void VulkanRHI::cmdCopyBuffer(RHICommandBuffer* commandBuffer,
                              Cast<vk::BufferCopy>(copyRegions.data()));
 }
 
+void VulkanRHI::beforePass() {
+  if (device.waitForFences(1, &isFrameInFlightFences[currentFrameIndex],
+                           VK_TRUE, UINT64_MAX) != vk::Result::eSuccess) {
+    LOG_ERROR("WaitForFences failed.")
+  }
+
+  auto acuqireRet = device.acquireNextImageKHR(
+      swapChain, UINT64_MAX,
+      imageAvailableForRenderSemaphores[currentFrameIndex], VK_NULL_HANDLE,
+      &currentSwapChainImageIndex);
+  if (acuqireRet == vk::Result::eErrorOutOfDateKHR) {
+    recreateSwapChain();
+    return;
+  } else if (acuqireRet != vk::Result::eSuccess &&
+             acuqireRet != vk::Result::eSuboptimalKHR) {
+    LOG_ERROR("AcquireNextImage failed.");
+  }
+  if (device.resetFences(1, &isFrameInFlightFences[currentFrameIndex]) !=
+      vk::Result::eSuccess) {
+    LOG_ERROR("ResetFences failed.");
+  }
+  commandBuffers[currentFrameIndex].reset();
+}
+
+void VulkanRHI::waitIdle() {
+  device.waitIdle();
+}
+
 void VulkanRHI::submitRendering() {
   auto submitInfo =
       vk::SubmitInfo()
           .setWaitSemaphoreCount(1)
           .setPWaitSemaphores(
-              &imageAvailableForRenderSemaphores[currentSwapChainImageIndex])
+              &imageAvailableForRenderSemaphores[currentFrameIndex])
           .setCommandBufferCount(1)
           .setPCommandBuffers(
               Cast<vk::CommandBuffer>(&commandBuffers[currentFrameIndex]))
@@ -898,19 +931,19 @@ void VulkanRHI::submitRendering() {
 
   if (device.resetFences(1, &isFrameInFlightFences[currentFrameIndex]) !=
       vk::Result::eSuccess) {
-    std::cerr << "DeviceResetFences failed.";
+    LOG_ERROR("DeviceResetFences failed.")
     return;
   }
 
   if (presentQueue.submit(1, &submitInfo,
                           isFrameInFlightFences[currentFrameIndex]) !=
       vk::Result::eSuccess) {
-    std::cerr << "QueueResetFences failed.";
+    LOG_ERROR("QueueResetFences failed.")
     return;
   }
 
   if (presentQueue.presentKHR(presentInfo) != vk::Result::eSuccess) {
-    std::cerr << "QueuePresentKHR failed.";
+    LOG_ERROR("QueuePresentKHR failed.")
     return;
   }
   currentFrameIndex = (currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -952,22 +985,15 @@ vk::Bool32 VulkanRHI::debugCallback(
   using DebugSeverityFlag = vk::DebugUtilsMessageSeverityFlagBitsEXT;
   switch (messageSeverity) {
     case DebugSeverityFlag::eInfo:
-      std::cerr << "[validation layer (Info)]" << pCallbackData->pMessage
-                << "\n";
+      LOG_FMT("[validation layer] {}", pCallbackData->pMessage);
       break;
     case DebugSeverityFlag::eVerbose:
-      /*
-    std::cout << "[validation layer (Verbose)]" << pCallbackData->pMessage
-              << "\n";
-              */
       break;
     case DebugSeverityFlag::eWarning:
-      std::cerr << "[validation layer (Warning)]" << pCallbackData->pMessage
-                << "\n";
+      LOG_WARN_FMT("[validation layer] {}", pCallbackData->pMessage)
       break;
     default:
-      std::cerr << "[validation layer (Error)]" << pCallbackData->pMessage
-                << "\n";
+      LOG_ERROR_FMT("[validation layer] {}", pCallbackData->pMessage)
       break;
   }
   return VK_FALSE;

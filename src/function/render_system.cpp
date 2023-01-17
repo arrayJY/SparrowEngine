@@ -11,7 +11,6 @@
 #include "RHI/vulkan/vulkan_rhi_resource.h"
 #include "RHI/vulkan/vulkan_utils.h"
 #include "function/window_system.h"
-#include "render_mesh.h"
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -62,13 +61,13 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   float swapChainWidth = swapChainInfo.extent.width;
   float swapChainHeight = swapChainInfo.extent.height;
 
-  auto viewport = RHIViewport{.x = 0.0f,
+  viewport = RHIViewport{.x = 0.0f,
                               .y = 0.0f,
                               .width = swapChainWidth,
                               .height = swapChainHeight,
                               .minDepth = 0.0f,
                               .maxDepth = 1.0f};
-  auto scissor = RHIRect2D{.extend = swapChainInfo.extent};
+  scissor = RHIRect2D{.extend = swapChainInfo.extent};
   auto viewportStateCreateInfo =
       RHIViewportStateCreateInfo{.viewportCount = 1,
                                  .viewports = &viewport,
@@ -202,21 +201,23 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .basePipelineIndex = -1,
   };
 
-  std::vector<Vertex> vertices = {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+  vertices = {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
                                   {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
                                   {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
                                   {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
-  std::vector<uint16_t> indices = {0, 1, 2, 2, 3, 0};
+  indices = {0, 1, 2, 2, 3, 0};
 
   auto [_vertexBuffer, _vertexBufferMemory] = createVertexBuffer(vertices);
   auto [_indexBuffer, _indexBufferMemory] = createIndexBuffer(indices);
-  auto [_uniformBuffers, _uniformBufferMemories] = createUniformBuffers();
+  auto [_uniformBuffers, _uniformBufferMemories, _uniformBufferMappedMemories] =
+      createUniformBuffers();
   vertexBuffer = std::move(_vertexBuffer);
   vertexBufferMemory = std::move(_vertexBufferMemory);
   indexBuffer = std::move(_indexBuffer);
   indexBufferMemory = std::move(_indexBufferMemory);
   uniformBuffers = std::move(_uniformBuffers);
   uniformBufferMemories = std::move(_uniformBufferMemories);
+  uniformBuffersMappedMemories = std::move(_uniformBufferMappedMemories);
 
   std::vector<RHIDescriptorBufferInfo> bufferInfos;
   std::vector<RHIWriteDescriptorSet> writeDescriptorSets;
@@ -242,51 +243,16 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
     });
   }
   rhi->updateDescriptorSets(writeDescriptorSets);
-  updateUniformBuffer(uniformBufferMemories[rhi->getCurrentFrameIndex()].get());
-
   graphicsPipeline = rhi->createGraphicsPipeline(grpahicPipelineCreateInfo);
-
-  auto commandBuffer = rhi->getCurrentCommandBuffer();
-
-  rhi->beginCommandBuffer(commandBuffer, nullptr);
-
-  RHIClearValue clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-  auto renderPassBeginInfo =
-      RHIRenderPassBeginInfo{.renderPass = renderPass.get(),
-                             .frameBuffer = framebuffer.get(),
-                             .renderArea =
-                                 {
-                                     .offset = {0, 0},
-                                     .extend = swapChainInfo.extent,
-                                 },
-                             .clearValueCount = 1,
-                             .clearValue = &clearValue};
-
-  rhi->cmdBeginRenderPass(commandBuffer, &renderPassBeginInfo,
-                          RHISubpassContents::Inline);
-  rhi->cmdBindPipeline(commandBuffer, RHIPipelineBindPoint::Graphics,
-                       graphicsPipeline.get());
-
-  RHIBuffer* vertexBuffers[] = {vertexBuffer.get()};
-  RHIDeviceSize offsets[] = {0};
-  rhi->cmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-  rhi->cmdBindIndexBuffer(commandBuffer, indexBuffer.get(), 0,
-                          RHIIndexType::Uint16);
-  rhi->cmdBindDescriptorSets(
-      commandBuffer, RHIPipelineBindPoint::Graphics, piplineLayout.get(), 0, 1,
-      descriptorSets[currentFrameIndex].get(), 0, nullptr);
-  rhi->cmdSetViewport(commandBuffer, 0, 1, &viewport);
-  rhi->cmdSetScissor(commandBuffer, 0, 1, &scissor);
-  //   rhi->cmdDraw(commandBuffer, 3, 1, 0, 0);
-  rhi->cmdDrawIndexed(commandBuffer, indices.size(), 1, 0, 0, 0);
-  rhi->cmdEndRenderPass(commandBuffer);
-  rhi->endCommandBuffer(commandBuffer);
-
-  rhi->submitRendering();
 }
+
 void RenderSystem::tick(float deltaTime) {
-   updateUniformBuffer(uniformBufferMemories[rhi->getCurrentFrameIndex()].get());
-   rhi->submitRendering();
+  rhi->beforePass();
+  updateUniformBuffer(uniformBuffersMappedMemories[rhi->getCurrentFrameIndex()]);
+  auto commandBuffer = rhi->getCurrentCommandBuffer();
+  recordCommandBuffer(commandBuffer);
+  rhi->submitRendering();
+  rhi->waitIdle();
 }
 
 std::vector<char> RenderSystem::readFile(const std::string& filename) {
@@ -388,7 +354,8 @@ RenderSystem::createVertexBuffer(std::span<Vertex> vertices) {
 }
 
 std::tuple<std::vector<std::unique_ptr<RHIBuffer>>,
-           std::vector<std::unique_ptr<RHIDeviceMemory>>>
+           std::vector<std::unique_ptr<RHIDeviceMemory>>,
+           std::vector<void*>>
 RenderSystem::createUniformBuffers() {
   std::vector<std::unique_ptr<RHIBuffer>> uniformBuffers;
   std::vector<std::unique_ptr<RHIDeviceMemory>> uniformBufferMemorys;
@@ -416,10 +383,11 @@ RenderSystem::createUniformBuffers() {
   }
 
   return std::make_tuple(std::move(uniformBuffers),
-                         std::move(uniformBufferMemorys));
+                         std::move(uniformBufferMemorys),
+                         std::move(uniformBuffersMapped));
 }
 
-void RenderSystem::updateUniformBuffer(RHIDeviceMemory* bufferMemory) {
+void RenderSystem::updateUniformBuffer(void* mappedMemory) {
   static auto startTime = std::chrono::high_resolution_clock::now();
   auto currentTime = std::chrono::high_resolution_clock::now();
   auto swapChainInfo = rhi->getSwapChainInfo();
@@ -438,9 +406,44 @@ void RenderSystem::updateUniformBuffer(RHIDeviceMemory* bufferMemory) {
           10.0f),
   };
   ubo.projection[1][1] *= -1;
-  auto mappedMemory = rhi->mapMemory(bufferMemory, 0, sizeof(ubo));
   std::memcpy(mappedMemory, &ubo, sizeof(ubo));
-  rhi->unmapMemory(bufferMemory);
 };
+
+void RenderSystem::recordCommandBuffer(RHICommandBuffer* commandBuffer) {
+  auto swapChainInfo = rhi->getSwapChainInfo();
+  auto imageIndex = rhi->getCurrentSwapChainImageIndex();
+  rhi->beginCommandBuffer(commandBuffer, nullptr);
+
+  RHIClearValue clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+  auto renderPassBeginInfo =
+      RHIRenderPassBeginInfo{.renderPass = renderPass.get(),
+                             .frameBuffer = framebuffer.get(),
+                             .renderArea =
+                                 {
+                                     .offset = {0, 0},
+                                     .extend = swapChainInfo.extent,
+                                 },
+                             .clearValueCount = 1,
+                             .clearValue = &clearValue};
+  rhi->cmdBeginRenderPass(commandBuffer, &renderPassBeginInfo,
+                          RHISubpassContents::Inline);
+  rhi->cmdBindPipeline(commandBuffer, RHIPipelineBindPoint::Graphics,
+                       graphicsPipeline.get());
+
+  RHIBuffer* vertexBuffers[] = {vertexBuffer.get()};
+  RHIDeviceSize offsets[] = {0};
+  rhi->cmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+  rhi->cmdBindIndexBuffer(commandBuffer, indexBuffer.get(), 0,
+                          RHIIndexType::Uint16);
+  rhi->cmdBindDescriptorSets(
+      commandBuffer, RHIPipelineBindPoint::Graphics, piplineLayout.get(), 0, 1,
+      descriptorSets[imageIndex].get(), 0, nullptr);
+  rhi->cmdSetViewport(commandBuffer, 0, 1, &viewport);
+  rhi->cmdSetScissor(commandBuffer, 0, 1, &scissor);
+  //   rhi->cmdDraw(commandBuffer, 3, 1, 0, 0);
+  rhi->cmdDrawIndexed(commandBuffer, indices.size(), 1, 0, 0, 0);
+  rhi->cmdEndRenderPass(commandBuffer);
+  rhi->endCommandBuffer(commandBuffer);
+}
 
 }  // namespace Sparrow

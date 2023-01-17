@@ -21,7 +21,7 @@ namespace Sparrow {
                    << "(): " << RESET << (str) << "\n";              \
   }
 
-#define FORMAT_STR(fmt, ...) (std::format((fmt), __VAR_ARGS__))
+#define FORMAT_STR(fmt, ...) (std::format((fmt), __VA_ARGS__))
 
 #define LOG(str) LOG_BASE(std::cout, WHITE, "LOG", str)
 
@@ -29,11 +29,11 @@ namespace Sparrow {
 
 #define LOG_ERROR(str) LOG_BASE(std::cerr, RED, "ERROR", str)
 
-#define LOG_FMT(fmt, ...) LOG(FORMAT_STR(fmt, __VAR_ARGS__))
+#define LOG_FMT(fmt, ...) LOG(FORMAT_STR(fmt, __VA_ARGS__))
 
-#define LOG_WARN_FMT(fmt, ...) LOG_WARN(FORMAT_STR(fmt, __VAR_ARGS__))
+#define LOG_WARN_FMT(fmt, ...) LOG_WARN(FORMAT_STR(fmt, __VA_ARGS__))
 
-#define LOG_ERROR_FMT(fmt, ...) LOG_ERROR(FORMAT_STR(fmt, __VAR_ARGS__))
+#define LOG_ERROR_FMT(fmt, ...) LOG_ERROR(FORMAT_STR(fmt, __VA_ARGS__))
 };  // namespace Sparrow
 
 #endif
