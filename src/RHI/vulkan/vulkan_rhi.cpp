@@ -292,7 +292,8 @@ std::unique_ptr<RHIFramebuffer> VulkanRHI::createFramebuffer(
       vk::FramebufferCreateInfo()
           .setRenderPass(GetResource<VulkanRenderPass>(createInfo.renderPass))
           .setAttachmentCount(createInfo.attachmentCount)
-          .setPAttachments(Cast<vk::ImageView>(createInfo.attachments))
+          .setPAttachments(Cast<vk::ImageView>(createInfo.attachments) +
+                           createInfo.attachmentsOffset)
           .setWidth(createInfo.width)
           .setHeight(createInfo.height)
           .setLayers(createInfo.layers);
@@ -670,6 +671,7 @@ RHISwapChainInfo VulkanRHI::getSwapChainInfo() {
       .imageFormat = static_cast<RHIFormat>(swapChainImageFormat.format),
       .imageViews =
           reinterpret_cast<RHIImageView*>(swapChainImagesViews.data()),
+      .imageViewsSize = swapChainImagesViews.size(),
   };
 }
 

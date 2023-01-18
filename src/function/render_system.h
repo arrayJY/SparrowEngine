@@ -56,7 +56,7 @@ class RenderSystem {
   std::vector<std::unique_ptr<RHIDescriptorSet>> descriptorSets;
   std::unique_ptr<RHIRenderPass> renderPass;
   std::unique_ptr<RHIPipelineLayout> piplineLayout;
-  std::unique_ptr<RHIFramebuffer> framebuffer;
+  std::vector<std::unique_ptr<RHIFramebuffer>> framebuffers;
   std::unique_ptr<RHIPipeline> graphicsPipeline;
   std::unique_ptr<RHIBuffer> indexBuffer, vertexBuffer;
   std::unique_ptr<RHIDeviceMemory> indexBufferMemory, vertexBufferMemory;

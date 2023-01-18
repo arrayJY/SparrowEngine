@@ -305,6 +305,7 @@ struct RHISwapChainInfo {
   RHIExtend2D extent;
   RHIFormat imageFormat;
   RHIImageView* imageViews;
+  size_t imageViewsSize;
 };
 
 struct RHICommandBufferBeginInfo {
@@ -346,6 +347,7 @@ struct RHIFramebufferCreateInfo {
   RHIRenderPass* renderPass;
   uint32_t attachmentCount;
   const RHIImageView* attachments;
+  const size_t attachmentsOffset;
   uint32_t width;
   uint32_t height;
   uint32_t layers;

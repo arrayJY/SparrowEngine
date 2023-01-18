@@ -62,11 +62,11 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   float swapChainHeight = swapChainInfo.extent.height;
 
   viewport = RHIViewport{.x = 0.0f,
-                              .y = 0.0f,
-                              .width = swapChainWidth,
-                              .height = swapChainHeight,
-                              .minDepth = 0.0f,
-                              .maxDepth = 1.0f};
+                         .y = 0.0f,
+                         .width = swapChainWidth,
+                         .height = swapChainHeight,
+                         .minDepth = 0.0f,
+                         .maxDepth = 1.0f};
   scissor = RHIRect2D{.extend = swapChainInfo.extent};
   auto viewportStateCreateInfo =
       RHIViewportStateCreateInfo{.viewportCount = 1,
@@ -172,16 +172,19 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   renderPass = rhi->createRenderPass(renderPassCreateInfo);
   piplineLayout = rhi->createPipelineLayout(pipelineLayoutCreateInfo);
 
-  auto framebufferCreateInfo = RHIFramebufferCreateInfo{
-      .renderPass = renderPass.get(),
-      .attachmentCount = 1,
-      .attachments = &swapChainInfo.imageViews[currentFrameIndex],
-      .width = swapChainInfo.extent.width,
-      .height = swapChainInfo.extent.height,
-      .layers = 1,
-  };
-
-  framebuffer = rhi->createFramebuffer(framebufferCreateInfo);
+  framebuffers.reserve(swapChainInfo.imageViewsSize);
+  for (auto i = 0U; i < swapChainInfo.imageViewsSize; i++) {
+    auto framebufferCreateInfo = RHIFramebufferCreateInfo{
+        .renderPass = renderPass.get(),
+        .attachmentCount = 1,
+        .attachments = swapChainInfo.imageViews,
+        .attachmentsOffset = i,
+        .width = swapChainInfo.extent.width,
+        .height = swapChainInfo.extent.height,
+        .layers = 1,
+    };
+    framebuffers.push_back(rhi->createFramebuffer(framebufferCreateInfo));
+  }
 
   auto grpahicPipelineCreateInfo = RHIGraphicsPipelineCreateInfo{
       .stageCount = 2,
@@ -202,9 +205,9 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   };
 
   vertices = {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-                                  {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-                                  {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-                                  {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
+              {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+              {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+              {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
   indices = {0, 1, 2, 2, 3, 0};
 
   auto [_vertexBuffer, _vertexBufferMemory] = createVertexBuffer(vertices);
@@ -248,7 +251,8 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
 
 void RenderSystem::tick(float deltaTime) {
   rhi->beforePass();
-  updateUniformBuffer(uniformBuffersMappedMemories[rhi->getCurrentFrameIndex()]);
+  updateUniformBuffer(
+      uniformBuffersMappedMemories[rhi->getCurrentFrameIndex()]);
   auto commandBuffer = rhi->getCurrentCommandBuffer();
   recordCommandBuffer(commandBuffer);
   rhi->submitRendering();
@@ -417,7 +421,7 @@ void RenderSystem::recordCommandBuffer(RHICommandBuffer* commandBuffer) {
   RHIClearValue clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
   auto renderPassBeginInfo =
       RHIRenderPassBeginInfo{.renderPass = renderPass.get(),
-                             .frameBuffer = framebuffer.get(),
+                             .frameBuffer = framebuffers[imageIndex].get(),
                              .renderArea =
                                  {
                                      .offset = {0, 0},
@@ -435,9 +439,9 @@ void RenderSystem::recordCommandBuffer(RHICommandBuffer* commandBuffer) {
   rhi->cmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
   rhi->cmdBindIndexBuffer(commandBuffer, indexBuffer.get(), 0,
                           RHIIndexType::Uint16);
-  rhi->cmdBindDescriptorSets(
-      commandBuffer, RHIPipelineBindPoint::Graphics, piplineLayout.get(), 0, 1,
-      descriptorSets[imageIndex].get(), 0, nullptr);
+  rhi->cmdBindDescriptorSets(commandBuffer, RHIPipelineBindPoint::Graphics,
+                             piplineLayout.get(), 0, 1,
+                             descriptorSets[imageIndex].get(), 0, nullptr);
   rhi->cmdSetViewport(commandBuffer, 0, 1, &viewport);
   rhi->cmdSetScissor(commandBuffer, 0, 1, &scissor);
   //   rhi->cmdDraw(commandBuffer, 3, 1, 0, 0);
