@@ -17,6 +17,12 @@
 #include "vulkan_utils.h"
 
 namespace Sparrow {
+#define LOG_IF_NOT_SUCCESS(RET, TEXT)  \
+  do {                                 \
+    if ((RET) != vk::Result::eSuccess) \
+      LOG_ERROR((TEXT));               \
+  } while (0)
+
 #ifdef NDEBUG
 
 static constexpr bool enableValidationLayers = false;
@@ -557,6 +563,45 @@ VulkanRHI::createImage(const RHIImageCreateInfo& createInfo) {
   image->setResource(vkImage);
   deviceMemory->setResource(vkDeviceMemory);
   return std::make_tuple(std::move(image), std::move(deviceMemory));
+}
+
+std::tuple<std::unique_ptr<RHIImage>, std::unique_ptr<RHIDeviceMemory>>
+VulkanRHI::createImageAndCopyData(const RHIImageCreateInfo& createInfo,
+                                  void* data,
+                                  size_t dataSize) {
+  auto stagingBufferCreateInfo = RHIBufferCreateInfo{
+      .size = dataSize,
+      .usage = RHIBufferUsageFlag::TransferSrc,
+      .sharingMode = RHISharingMode::Exclusive,
+  };
+
+  auto [stagingBuffer, stagingBufferMemory] = VulkanUtils::createBuffer(
+      gpu, device, stagingBufferCreateInfo,
+      RHIMemoryPropertyFlag::HostVisible | RHIMemoryPropertyFlag::HostCoherent);
+
+  void* stagingBufferMappedMemory =
+      device.mapMemory(stagingBufferMemory, 0, dataSize);
+  std::memcpy(stagingBufferMappedMemory, data, dataSize);
+  device.unmapMemory(stagingBufferMemory);
+
+  auto [image, imageMemory] = createImage(createInfo);
+  auto vkImage = GetResource<VulkanImage>(image.get());
+
+  VulkanUtils::transitionImageLayout(this, vkImage, vk::Format::eR8G8B8A8Srgb,
+                                     vk::ImageLayout::eUndefined,
+                                     vk::ImageLayout::eTransferDstOptimal);
+
+  VulkanUtils::copyBufferToImage(this, stagingBuffer, vkImage, createInfo.width,
+                                 createInfo.height);
+
+  VulkanUtils::transitionImageLayout(
+      this, GetResource<VulkanImage>(image.get()), vk::Format::eR8G8B8A8Srgb,
+      vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eReadOnlyOptimal);
+
+  device.destroyBuffer(stagingBuffer);
+  device.freeMemory(stagingBufferMemory);
+
+  return std::make_tuple(std::move(image), std::move(imageMemory));
 }
 
 void VulkanRHI::destoryBuffer(RHIBuffer* buffer) {

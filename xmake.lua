@@ -3,7 +3,7 @@ set_version("0.0.1")
 
 add_rules("mode.debug", "mode.release")
 
-add_requires("glfw", "glm", "vulkansdk")
+add_requires("glfw", "glm", "vulkansdk", "stb")
 add_requires("glslang", {configs = {binaryonly = true}})
 
 set_warnings("all")
@@ -16,7 +16,7 @@ target("SparrowEngine")
     add_files("src/*.cpp")
     add_files("src/**/*.cpp")
     add_includedirs("./src")
-    add_packages("glfw", "glm", "vulkansdk")
+    add_packages("glfw", "glm", "vulkansdk", "stb")
     add_packages("glslang")
     add_defines("SHADER_DIR=\"" .. path.join(os.projectdir(), "build/shaders"):gsub("\\", "/") .. "\"" )
 

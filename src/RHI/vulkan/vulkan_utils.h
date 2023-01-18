@@ -13,7 +13,7 @@ namespace Sparrow {
 template <typename T, typename U>
   requires std::is_enum_v<T>
 T Cast(U value) {
-  return static_cast<T>(value);
+  return static_cast<typename std::underlying_type<T>::type>(value);
 }
 template <typename T, typename U>
   requires std::is_class_v<T>
@@ -35,6 +35,10 @@ const T* Cast(U* value) {
   return reinterpret_cast<const T*>(value);
 }
 
+template <typename T>
+T NullFlag() {
+  static_cast<T>(0U);
+}
 class VulkanUtils {
  public:
   static void createImage(vk::PhysicalDevice physicalDevice,
@@ -68,11 +72,16 @@ class VulkanUtils {
   static uint32_t findMemoryType(vk::PhysicalDevice physicalDevice,
                                  uint32_t typeFilter,
                                  vk::MemoryPropertyFlags memoryPropertyFlags);
-
-  template <typename T>
-  inline auto scopedEnumValue(T v) {
-    return static_cast<typename std::underlying_type<T>::type>(v);
-  }
+  static void transitionImageLayout(class RHI* rhi,
+                                    vk::Image image,
+                                    vk::Format format,
+                                    vk::ImageLayout oldLayout,
+                                    vk::ImageLayout newLayout);
+  static void copyBufferToImage(class RHI* rhi,
+                                vk::Buffer buffer,
+                                vk::Image image,
+                                uint32_t width,
+                                uint32_t height);
 };
 
 }  // namespace Sparrow

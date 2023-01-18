@@ -10,7 +10,9 @@
 #include "RHI/vulkan/vulkan_rhi.h"
 #include "RHI/vulkan/vulkan_rhi_resource.h"
 #include "RHI/vulkan/vulkan_utils.h"
+#include "function/render_resource.h"
 #include "function/window_system.h"
+
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -389,6 +391,27 @@ RenderSystem::createUniformBuffers() {
   return std::make_tuple(std::move(uniformBuffers),
                          std::move(uniformBufferMemorys),
                          std::move(uniformBuffersMapped));
+}
+
+std::tuple<std::unique_ptr<RHIImage>, std::unique_ptr<RHIDeviceMemory>>
+RenderSystem::createTextureImage() {
+  RenderTexture texture;
+  texture.load("texture.png");
+
+  auto [image, imageMemory] = rhi->createImageAndCopyData(
+      RHIImageCreateInfo{
+          .width = static_cast<uint32_t>(texture.width),
+          .height = static_cast<uint32_t>(texture.height),
+          .format = RHIFormat::R8G8B8A8Srgb,
+          .tiling = RHIImageTiling::Optimal,
+          .imageUsageFlags =
+              RHIImageUsageFlag::TransferDst | RHIImageUsageFlag::Sampled,
+          .memoryPropertyFlags = RHIMemoryPropertyFlag::DeviceLocal,
+          .arrayLayers = 1,
+      },
+      texture.getData(), texture.imageSize);
+
+  return std::make_tuple(std::move(image), std::move(imageMemory));
 }
 
 void RenderSystem::updateUniformBuffer(void* mappedMemory) {
