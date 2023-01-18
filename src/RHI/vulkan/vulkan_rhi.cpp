@@ -565,7 +565,9 @@ VulkanRHI::createImage(const RHIImageCreateInfo& createInfo) {
   return std::make_tuple(std::move(image), std::move(deviceMemory));
 }
 
-std::tuple<std::unique_ptr<RHIImage>, std::unique_ptr<RHIDeviceMemory>>
+std::tuple<std::unique_ptr<RHIImage>,
+           std::unique_ptr<RHIImageView>,
+           std::unique_ptr<RHIDeviceMemory>>
 VulkanRHI::createImageAndCopyData(const RHIImageCreateInfo& createInfo,
                                   void* data,
                                   size_t dataSize) {
@@ -598,10 +600,16 @@ VulkanRHI::createImageAndCopyData(const RHIImageCreateInfo& createInfo,
       this, GetResource<VulkanImage>(image.get()), vk::Format::eR8G8B8A8Srgb,
       vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eReadOnlyOptimal);
 
+  auto vkImageView = VulkanUtils::createImageView(
+      device, vkImage, Cast<vk::Format>(createInfo.format),
+      vk::ImageAspectFlagBits::eColor, vk::ImageViewType::e2D, 1, 0);
+  auto imageView = std::make_unique<VulkanImageView>();
+  imageView->setResource(vkImageView);
+
   device.destroyBuffer(stagingBuffer);
   device.freeMemory(stagingBufferMemory);
 
-  return std::make_tuple(std::move(image), std::move(imageMemory));
+  return std::make_tuple(std::move(image), std::move(imageView), std::move(imageMemory));
 }
 
 void VulkanRHI::destoryBuffer(RHIBuffer* buffer) {

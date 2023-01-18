@@ -393,12 +393,14 @@ RenderSystem::createUniformBuffers() {
                          std::move(uniformBuffersMapped));
 }
 
-std::tuple<std::unique_ptr<RHIImage>, std::unique_ptr<RHIDeviceMemory>>
+std::tuple<std::unique_ptr<RHIImage>,
+           std::unique_ptr<RHIImageView>,
+           std::unique_ptr<RHIDeviceMemory>>
 RenderSystem::createTextureImage() {
   RenderTexture texture;
   texture.load("texture.png");
 
-  auto [image, imageMemory] = rhi->createImageAndCopyData(
+  auto [image, imageView, imageMemory] = rhi->createImageAndCopyData(
       RHIImageCreateInfo{
           .width = static_cast<uint32_t>(texture.width),
           .height = static_cast<uint32_t>(texture.height),
@@ -411,7 +413,8 @@ RenderSystem::createTextureImage() {
       },
       texture.getData(), texture.imageSize);
 
-  return std::make_tuple(std::move(image), std::move(imageMemory));
+  return std::make_tuple(std::move(image), std::move(imageView),
+                         std::move(imageMemory));
 }
 
 void RenderSystem::updateUniformBuffer(void* mappedMemory) {

@@ -39,8 +39,11 @@ class RHI {
                      std::unique_ptr<RHIDeviceMemory>>
   createImage(const RHIImageCreateInfo& createInfo) = 0;
   virtual std::tuple<std::unique_ptr<RHIImage>,
+                     std::unique_ptr<RHIImageView>,
                      std::unique_ptr<RHIDeviceMemory>>
-  createImageAndCopyData(const RHIImageCreateInfo& createInfo, void* data, size_t dataSize) = 0;
+  createImageAndCopyData(const RHIImageCreateInfo& createInfo,
+                         void* data,
+                         size_t dataSize) = 0;
   virtual std::unique_ptr<RHIDescriptorSetLayout> createDescriptorSetLayout(
       RHIDescriptorSetLayoutCreateInfo& createInfo) = 0;
   virtual std::vector<std::unique_ptr<RHIDescriptorSet>> allocateDescriptorSets(

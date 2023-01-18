@@ -40,7 +40,9 @@ class RenderSystem {
              std::vector<void*>>
   createUniformBuffers();
 
-  std::tuple<std::unique_ptr<RHIImage>, std::unique_ptr<RHIDeviceMemory>>
+  std::tuple<std::unique_ptr<RHIImage>,
+             std::unique_ptr<RHIImageView>,
+             std::unique_ptr<RHIDeviceMemory>>
   createTextureImage();
 
   std::vector<std::unique_ptr<RHIBuffer>> uniformBuffers;

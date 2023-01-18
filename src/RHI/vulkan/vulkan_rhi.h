@@ -54,7 +54,7 @@ class VulkanRHI : public RHI {
                RHIMemoryPropertyFlag properties) override;
   std::tuple<std::unique_ptr<RHIImage>, std::unique_ptr<RHIDeviceMemory>>
   createImage(const RHIImageCreateInfo& createInfo) override;
-  std::tuple<std::unique_ptr<RHIImage>, std::unique_ptr<RHIDeviceMemory>>
+std::tuple<std::unique_ptr<RHIImage>, std::unique_ptr<RHIImageView>, std::unique_ptr<RHIDeviceMemory>>
   createImageAndCopyData(const RHIImageCreateInfo& createInfo,
                          void* data, size_t dataSize) override;
   void destoryBuffer(RHIBuffer* buffer) override;
