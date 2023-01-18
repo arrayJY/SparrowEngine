@@ -13,7 +13,7 @@ namespace Sparrow {
 template <typename T, typename U>
   requires std::is_enum_v<T>
 T Cast(U value) {
-  return static_cast<typename std::underlying_type<T>::type>(value);
+  return static_cast<T>(value);
 }
 template <typename T, typename U>
   requires std::is_class_v<T>
@@ -37,7 +37,7 @@ const T* Cast(U* value) {
 
 template <typename T>
 T NullFlag() {
-  static_cast<T>(0U);
+  return static_cast<T>(0U);
 }
 class VulkanUtils {
  public:

@@ -31,6 +31,8 @@ class RenderTexture : public RenderResource {
   RHIDeviceSize imageSize = 0;
 };
 
+inline RenderResource::~RenderResource() = default;
+
 }  // namespace Sparrow
 
 #endif
