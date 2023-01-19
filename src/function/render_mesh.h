@@ -14,6 +14,7 @@ namespace Sparrow {
 struct Vertex {
   glm::vec2 position;
   glm::vec3 color;
+  glm::vec2 texCoord;
 
   static RHIVertexBindingDescription getBindingDescription() {
     return RHIVertexBindingDescription{.binding = 0,
@@ -21,9 +22,9 @@ struct Vertex {
                                        .inputRate = RHIVertexInputRate::Vertex};
   }
 
-  static std::array<RHIVertexAttributeDescription, 2>
+  static std::array<RHIVertexAttributeDescription, 3>
   getAttributeDescription() {
-    std::array<RHIVertexAttributeDescription, 2> descriptions;
+    std::array<RHIVertexAttributeDescription, 3> descriptions;
 
     descriptions[0] = RHIVertexAttributeDescription{
         .location = 0,
@@ -37,6 +38,13 @@ struct Vertex {
         .binding = 0,
         .format = RHIFormat::R32G32B32Sfloat,
         .offset = offsetof(Vertex, color),
+    };
+
+    descriptions[2] = RHIVertexAttributeDescription{
+        .location = 2,
+        .binding = 0,
+        .format = RHIFormat::R32G32Sfloat,
+        .offset = offsetof(Vertex, texCoord),
     };
 
     return descriptions;

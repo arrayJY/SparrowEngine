@@ -584,7 +584,6 @@ enum class RHIImageUsageFlag {
   ShadingRateImageNV = RHIImageUsageFlag::FragmentShadingRateAttachmentKHR,
 };
 
-
 enum class RHIImageCreateFlag {
   SparseBinding = 0x00000001,
   SparseResidency = 0x00000002,
@@ -610,6 +609,38 @@ enum class RHIImageCreateFlag {
   DisjointKHR = RHIImageCreateFlag::Disjoint,
   ExtendedUsageKHR = RHIImageCreateFlag::ExtendedUsage,
   SplitInstanceBindRegionsKHR = RHIImageCreateFlag::SplitInstanceBindRegions,
+};
+
+enum class RHIBorderColor {
+  FloatTransparentBlack = 0,
+  IntTransparentBlack = 1,
+  FloatOpaqueBlack = 2,
+  IntOpaqueBlack = 3,
+  FloatOpaqueWhite = 4,
+  IntOpaqueWhite = 5,
+  FloatCustomEXT = 1000287003,
+  IntCustomEXT = 1000287004,
+};
+
+enum class RHISamplerAddressMode {
+  Repeat = 0,
+  MirroredRepeat = 1,
+  ClampToEdge = 2,
+  ClampToBorder = 3,
+  MirrorClampToEdge = 4,
+  MirrorClampToEdgeKHR = RHISamplerAddressMode::MirrorClampToEdge,
+};
+
+enum class RHISamplerMipmapMode {
+  Nearest = 0,
+  Linear = 1,
+};
+
+enum class RHIFilter {
+  Nearest = 0,
+  Linear = 1,
+  CubicEXT = 1000015000,
+  CubicIMG = RHIFilter::CubicEXT
 };
 
 template <typename EnumType>

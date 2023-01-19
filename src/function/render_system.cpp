@@ -57,7 +57,6 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   };
 
   const auto swapChainInfo = rhi->getSwapChainInfo();
-  const auto currentFrameIndex = rhi->getCurrentFrameIndex();
   const auto maxFrameInFlight = rhi->getMaxFramesInFlight();
 
   float swapChainWidth = swapChainInfo.extent.width;
@@ -152,10 +151,21 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .stageFlags = RHIShaderStageFlag::Vertex,
       .immutableSamplers = nullptr,
   };
-  auto descriptorSetLayoutCreateInfo = RHIDescriptorSetLayoutCreateInfo{
-      .bindingCount = 1,
-      .bindings = &uboLayoutBinding,
+  auto sampleLayoutBinding = RHIDescriptorSetLayoutBinding{
+      .binding = 1,
+      .descriptorType = RHIDescriptorType::CombinedImageSampler,
+      .descriptorCount = 1,
+      .stageFlags = RHIShaderStageFlag::Fragment,
+      .immutableSamplers = nullptr,
   };
+  std::array<RHIDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding,
+                                                           sampleLayoutBinding};
+
+  auto descriptorSetLayoutCreateInfo = RHIDescriptorSetLayoutCreateInfo{
+      .bindingCount = bindings.size(),
+      .bindings = bindings.data(),
+  };
+
   descriptorSetLayout =
       rhi->createDescriptorSetLayout(descriptorSetLayoutCreateInfo);
   descriptorSets = rhi->allocateDescriptorSets(RHIDescriptorSetAllocateInfo{
@@ -206,16 +216,19 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .basePipelineIndex = -1,
   };
 
-  vertices = {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-              {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-              {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-              {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
+  vertices = {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+              {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+              {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+              {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
   indices = {0, 1, 2, 2, 3, 0};
 
   auto [_vertexBuffer, _vertexBufferMemory] = createVertexBuffer(vertices);
   auto [_indexBuffer, _indexBufferMemory] = createIndexBuffer(indices);
   auto [_uniformBuffers, _uniformBufferMemories, _uniformBufferMappedMemories] =
       createUniformBuffers();
+  auto [_textureImage, _textureImageView, _textureImageMemory] =
+      createTextureImage();
+
   vertexBuffer = std::move(_vertexBuffer);
   vertexBufferMemory = std::move(_vertexBufferMemory);
   indexBuffer = std::move(_indexBuffer);
@@ -223,17 +236,48 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
   uniformBuffers = std::move(_uniformBuffers);
   uniformBufferMemories = std::move(_uniformBufferMemories);
   uniformBuffersMappedMemories = std::move(_uniformBufferMappedMemories);
+  textureImage = std::move(_textureImage);
+  textureImageView = std::move(_textureImageView);
+  textureImageMemory = std::move(_textureImageMemory);
+
+  textureSampler = rhi->createSampler(RHISamplerCreateInfo{
+      .magFilter = RHIFilter::Linear,
+      .minFilter = RHIFilter::Linear,
+      .mipmapMode = RHISamplerMipmapMode::Linear,
+      .addressModeU = RHISamplerAddressMode::Repeat,
+      .addressModeV = RHISamplerAddressMode::Repeat,
+      .addressModeW = RHISamplerAddressMode::Repeat,
+      .mipLodBias = 0.0f,
+      .anisotropyEnable = RHITrue,
+      .maxAnisotropy = 0,
+      .compareEnable = RHIFalse,
+      .compareOp = RHICompareOp::Always,
+      .minLod = 0.0f,
+      .maxLod = 0.0f,
+      .borderColor = RHIBorderColor::IntOpaqueBlack,
+      .unnormalizedCoordinates = RHIFalse,
+  });
 
   std::vector<RHIDescriptorBufferInfo> bufferInfos;
+  std::vector<RHIDescriptorImageInfo> imageInfos;
   std::vector<RHIWriteDescriptorSet> writeDescriptorSets;
+  std::vector<RHIWriteDescriptorSet> samplerWriteDescriptorSets;
   bufferInfos.reserve(maxFrameInFlight);
+  imageInfos.reserve(maxFrameInFlight);
   writeDescriptorSets.reserve(maxFrameInFlight);
+  samplerWriteDescriptorSets.reserve(maxFrameInFlight);
 
   for (auto i = 0; i < maxFrameInFlight; i++) {
     bufferInfos.push_back(RHIDescriptorBufferInfo{
         .buffer = uniformBuffers[i].get(),
         .offset = 0,
         .range = sizeof(Transform),
+    });
+
+    imageInfos.push_back(RHIDescriptorImageInfo{
+        .sampler = textureSampler.get(),
+        .imageView = textureImageView.get(),
+        .imageLayout = RHIImageLayout::ReadOnlyOptimal,
     });
 
     writeDescriptorSets.push_back(RHIWriteDescriptorSet{
@@ -246,8 +290,21 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
         .bufferInfo = &bufferInfos[i],
         .texelBufferView = nullptr,
     });
+
+    samplerWriteDescriptorSets.push_back(RHIWriteDescriptorSet{
+        .dstSet = descriptorSets[i].get(),
+        .dstBinding = 1,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = RHIDescriptorType::CombinedImageSampler,
+        .imageInfo = &imageInfos[i],
+        .bufferInfo = nullptr,
+        .texelBufferView = nullptr,
+    });
   }
   rhi->updateDescriptorSets(writeDescriptorSets);
+  rhi->updateDescriptorSets(samplerWriteDescriptorSets);
+
   graphicsPipeline = rhi->createGraphicsPipeline(grpahicPipelineCreateInfo);
 }
 
@@ -398,7 +455,7 @@ std::tuple<std::unique_ptr<RHIImage>,
            std::unique_ptr<RHIDeviceMemory>>
 RenderSystem::createTextureImage() {
   RenderTexture texture;
-  texture.load("texture.png");
+  texture.load(TEST_TEXTURE_PATH);
 
   auto [image, imageView, imageMemory] = rhi->createImageAndCopyData(
       RHIImageCreateInfo{
@@ -410,6 +467,7 @@ RenderSystem::createTextureImage() {
               RHIImageUsageFlag::TransferDst | RHIImageUsageFlag::Sampled,
           .memoryPropertyFlags = RHIMemoryPropertyFlag::DeviceLocal,
           .arrayLayers = 1,
+          .mipLevels = 1,
       },
       texture.getData(), texture.imageSize);
 

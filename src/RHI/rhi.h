@@ -44,6 +44,8 @@ class RHI {
   createImageAndCopyData(const RHIImageCreateInfo& createInfo,
                          void* data,
                          size_t dataSize) = 0;
+  virtual std::unique_ptr<RHISampler> createSampler(
+      const RHISamplerCreateInfo& createInfo) = 0;
   virtual std::unique_ptr<RHIDescriptorSetLayout> createDescriptorSetLayout(
       RHIDescriptorSetLayoutCreateInfo& createInfo) = 0;
   virtual std::vector<std::unique_ptr<RHIDescriptorSet>> allocateDescriptorSets(

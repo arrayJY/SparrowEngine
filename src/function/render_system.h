@@ -45,10 +45,6 @@ class RenderSystem {
              std::unique_ptr<RHIDeviceMemory>>
   createTextureImage();
 
-  std::vector<std::unique_ptr<RHIBuffer>> uniformBuffers;
-  std::vector<std::unique_ptr<RHIDeviceMemory>> uniformBufferMemories;
-  std::vector<void*> uniformBuffersMappedMemories;
-
   void updateUniformBuffer(void* mappedMemory);
 
   void recordCommandBuffer(RHICommandBuffer* commandBuffer);
@@ -64,8 +60,19 @@ class RenderSystem {
   std::unique_ptr<RHIPipelineLayout> piplineLayout;
   std::vector<std::unique_ptr<RHIFramebuffer>> framebuffers;
   std::unique_ptr<RHIPipeline> graphicsPipeline;
+
   std::unique_ptr<RHIBuffer> indexBuffer, vertexBuffer;
   std::unique_ptr<RHIDeviceMemory> indexBufferMemory, vertexBufferMemory;
+
+  std::vector<std::unique_ptr<RHIBuffer>> uniformBuffers;
+  std::vector<std::unique_ptr<RHIDeviceMemory>> uniformBufferMemories;
+  std::vector<void*> uniformBuffersMappedMemories;
+
+  std::unique_ptr<RHIImage> textureImage;
+  std::unique_ptr<RHIImageView> textureImageView;
+  std::unique_ptr<RHIDeviceMemory> textureImageMemory;
+  std::unique_ptr<RHISampler> textureSampler;
+
 };
 
 }  // namespace Sparrow

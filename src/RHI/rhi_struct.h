@@ -9,7 +9,6 @@
 #include <cstdint>
 #include "function/render_enum.h"
 
-// #include <vulkan/vulkan.hpp>
 
 namespace Sparrow {
 
@@ -387,8 +386,8 @@ struct RHIDescriptorSetAllocateInfo {
 };
 
 struct RHIDescriptorImageInfo {
-  RHISampler sampler = {};
-  RHIImageView imageView = {};
+  RHISampler* sampler = {};
+  RHIImageView* imageView = {};
   RHIImageLayout imageLayout = RHIImageLayout::Undefined;
 };
 
@@ -419,6 +418,24 @@ struct RHIImageCreateInfo {
   RHIImageCreateFlag imageCreateFlags;
   uint32_t arrayLayers;
   uint32_t mipLevels;
+};
+
+struct RHISamplerCreateInfo {
+  RHIFilter magFilter = RHIFilter::Nearest;
+  RHIFilter minFilter = RHIFilter::Nearest;
+  RHISamplerMipmapMode mipmapMode = RHISamplerMipmapMode::Nearest;
+  RHISamplerAddressMode addressModeU = RHISamplerAddressMode::Repeat;
+  RHISamplerAddressMode addressModeV = RHISamplerAddressMode::Repeat;
+  RHISamplerAddressMode addressModeW = RHISamplerAddressMode::Repeat;
+  float mipLodBias = {};
+  RHIBool32 anisotropyEnable = {};
+  float maxAnisotropy = {}; 
+  RHIBool32 compareEnable = {};
+  RHICompareOp compareOp = RHICompareOp::Never;
+  float minLod = {};
+  float maxLod = {};
+  RHIBorderColor borderColor = RHIBorderColor::FloatTransparentBlack;
+  RHIBool32 unnormalizedCoordinates = {};
 };
 
 }  // namespace Sparrow

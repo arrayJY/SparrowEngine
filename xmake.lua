@@ -19,6 +19,7 @@ target("SparrowEngine")
     add_packages("glfw", "glm", "vulkansdk", "stb")
     add_packages("glslang")
     add_defines("SHADER_DIR=\"" .. path.join(os.projectdir(), "build/shaders"):gsub("\\", "/") .. "\"" )
+    add_defines("TEST_TEXTURE_PATH=\"" .. path.join(os.projectdir(), "texture.jpg"):gsub("\\", "/") .. "\"" )
 
 --
 -- If you want to known more usage about xmake, please see https://xmake.io

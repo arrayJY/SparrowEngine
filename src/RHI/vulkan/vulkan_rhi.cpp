@@ -131,7 +131,9 @@ void VulkanRHI::createLogicalDevice() {
   if (!queueFamilyIndices.isComplete()) {
     throw std::runtime_error("Find queue families failed.");
   }
-  auto feature = vk::PhysicalDeviceFeatures().setGeometryShader(VK_TRUE);
+  auto feature = vk::PhysicalDeviceFeatures()
+                     .setGeometryShader(VK_TRUE)
+                     .setSamplerAnisotropy(VK_TRUE);
   deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
   std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
@@ -174,11 +176,18 @@ void VulkanRHI::createCommandBuffers() {
 }
 
 void VulkanRHI::createDescriptorPool() {
-  const auto poolSize =
-      vk::DescriptorPoolSize().setDescriptorCount(MAX_FRAMES_IN_FLIGHT);
+  std::array<vk::DescriptorPoolSize, 2> poolSizes;
+
+  poolSizes[0] = vk::DescriptorPoolSize()
+                     .setType(vk::DescriptorType::eUniformBuffer)
+                     .setDescriptorCount(MAX_FRAMES_IN_FLIGHT);
+  poolSizes[1] = vk::DescriptorPoolSize()
+                     .setType(vk::DescriptorType::eCombinedImageSampler)
+                     .setDescriptorCount(MAX_FRAMES_IN_FLIGHT);
+
   const auto poolCreateInfo = vk::DescriptorPoolCreateInfo()
-                                  .setPoolSizeCount(1)
-                                  .setPPoolSizes(&poolSize)
+                                  .setPoolSizeCount(poolSizes.size())
+                                  .setPPoolSizes(poolSizes.data())
                                   .setMaxSets(MAX_FRAMES_IN_FLIGHT);
   descriptorPool = device.createDescriptorPool(poolCreateInfo);
 }
@@ -602,14 +611,45 @@ VulkanRHI::createImageAndCopyData(const RHIImageCreateInfo& createInfo,
 
   auto vkImageView = VulkanUtils::createImageView(
       device, vkImage, Cast<vk::Format>(createInfo.format),
-      vk::ImageAspectFlagBits::eColor, vk::ImageViewType::e2D, 1, 0);
+      vk::ImageAspectFlagBits::eColor, vk::ImageViewType::e2D, 1,
+      createInfo.mipLevels);
   auto imageView = std::make_unique<VulkanImageView>();
   imageView->setResource(vkImageView);
 
   device.destroyBuffer(stagingBuffer);
   device.freeMemory(stagingBufferMemory);
 
-  return std::make_tuple(std::move(image), std::move(imageView), std::move(imageMemory));
+  return std::make_tuple(std::move(image), std::move(imageView),
+                         std::move(imageMemory));
+}
+
+std::unique_ptr<RHISampler> VulkanRHI::createSampler(
+    const RHISamplerCreateInfo& createInfo) {
+  auto properties = gpu.getProperties();
+  auto samplerCreateInfo =
+      vk::SamplerCreateInfo()
+          .setMagFilter(Cast<vk::Filter>(createInfo.magFilter))
+          .setMinFilter(Cast<vk::Filter>(createInfo.minFilter))
+          .setAddressModeU(
+              Cast<vk::SamplerAddressMode>(createInfo.addressModeU))
+          .setAddressModeV(
+              Cast<vk::SamplerAddressMode>(createInfo.addressModeV))
+          .setAddressModeW(
+              Cast<vk::SamplerAddressMode>(createInfo.addressModeW))
+          .setAnisotropyEnable(createInfo.anisotropyEnable)
+          .setMaxAnisotropy(properties.limits.maxSamplerAnisotropy)
+          .setBorderColor(Cast<vk::BorderColor>(createInfo.borderColor))
+          .setUnnormalizedCoordinates(createInfo.unnormalizedCoordinates)
+          .setCompareEnable(createInfo.compareEnable)
+          .setCompareOp(Cast<vk::CompareOp>(createInfo.compareOp))
+          .setMipmapMode(Cast<vk::SamplerMipmapMode>(createInfo.mipmapMode))
+          .setMipLodBias(createInfo.mipLodBias)
+          .setMinLod(createInfo.minLod)
+          .setMaxLod(createInfo.maxLod);
+  auto vkSampler = device.createSampler(samplerCreateInfo);
+  auto sampler = std::make_unique<VulkanSampler>();
+  sampler->setResource(vkSampler);
+  return sampler;
 }
 
 void VulkanRHI::destoryBuffer(RHIBuffer* buffer) {
@@ -674,15 +714,27 @@ void VulkanRHI::updateDescriptorSets(
   const auto descriptorCount = writeDescritorSets.size();
   std::vector<vk::DescriptorBufferInfo> vkDescriptorBufferInfos(
       descriptorCount);
+  std::vector<vk::DescriptorImageInfo> vkDescriptorImageInfos(descriptorCount);
   std::vector<vk::WriteDescriptorSet> vkWriteDescriptorSets(descriptorCount);
 
   for (auto i = 0; i < descriptorCount; i++) {
-    const auto& bufferInfo = writeDescritorSets[i].bufferInfo;
-    vkDescriptorBufferInfos[i] =
-        vk::DescriptorBufferInfo()
-            .setBuffer(GetResource<VulkanBuffer>(bufferInfo->buffer))
-            .setOffset(bufferInfo->offset)
-            .setRange(bufferInfo->range);
+    const auto bufferInfo = writeDescritorSets[i].bufferInfo;
+    const auto imageInfo = writeDescritorSets[i].imageInfo;
+    if (bufferInfo) {
+      vkDescriptorBufferInfos[i] =
+          vk::DescriptorBufferInfo()
+              .setBuffer(GetResource<VulkanBuffer>(bufferInfo->buffer))
+              .setOffset(bufferInfo->offset)
+              .setRange(bufferInfo->range);
+    }
+
+    if (imageInfo) {
+      vkDescriptorImageInfos[i] =
+          vk::DescriptorImageInfo()
+              .setImageLayout(Cast<vk::ImageLayout>(imageInfo->imageLayout))
+              .setImageView(GetResource<VulkanImageView>(imageInfo->imageView))
+              .setSampler(GetResource<VulkanSampler>(imageInfo->sampler));
+    }
 
     const auto& descriptorSet = writeDescritorSets[i];
     vkWriteDescriptorSets[i] =
@@ -693,9 +745,10 @@ void VulkanRHI::updateDescriptorSets(
             .setDescriptorCount(1)
             .setDescriptorType(
                 Cast<vk::DescriptorType>(descriptorSet.descriptorType))
-            .setPBufferInfo(&vkDescriptorBufferInfos[i])
-            .setPImageInfo(nullptr)        // TODO
-            .setPTexelBufferView(nullptr)  // TODO
+            .setPBufferInfo(bufferInfo ? &vkDescriptorBufferInfos[i] : nullptr)
+            .setPImageInfo(imageInfo ? &vkDescriptorImageInfos[i]
+                                     : nullptr)  // TODO
+            .setPTexelBufferView(nullptr)        // TODO
         ;
   }
   device.updateDescriptorSets(vkWriteDescriptorSets.size(),
