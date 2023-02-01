@@ -15,6 +15,7 @@ namespace Sparrow {
 using RHIBool32 = uint32_t;
 static constexpr RHIBool32 RHIFalse = 0U;
 static constexpr RHIBool32 RHITrue = 1U;
+static constexpr uint32_t RHISubpassExternal =  (~0U);
 
 using RHIDeviceSize = uint64_t;
 
@@ -307,6 +308,12 @@ struct RHISwapChainInfo {
   size_t imageViewsSize;
 };
 
+struct RHIDepthImageInfo {
+  RHIFormat format;
+  RHIImage* image;
+  RHIImageView* imageView;
+};
+
 struct RHICommandBufferBeginInfo {
   RHICommandBufferUsageFlag flags;
   RHICommandBufferInheritanceInfo* inheritanceInfo;
@@ -345,8 +352,7 @@ struct RHIRenderPassBeginInfo {
 struct RHIFramebufferCreateInfo {
   RHIRenderPass* renderPass;
   uint32_t attachmentCount;
-  const RHIImageView* attachments;
-  const size_t attachmentsOffset;
+  RHIImageView* const* attachments;
   uint32_t width;
   uint32_t height;
   uint32_t layers;
@@ -437,6 +443,7 @@ struct RHISamplerCreateInfo {
   RHIBorderColor borderColor = RHIBorderColor::FloatTransparentBlack;
   RHIBool32 unnormalizedCoordinates = {};
 };
+
 
 }  // namespace Sparrow
 

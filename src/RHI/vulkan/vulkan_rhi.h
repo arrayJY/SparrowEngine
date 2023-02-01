@@ -79,6 +79,8 @@ class VulkanRHI : public RHI {
   uint8_t getCurrentFrameIndex() override;
   uint32_t getCurrentSwapChainImageIndex() override;
   RHISwapChainInfo getSwapChainInfo() override;
+  RHIImageView * getSwapChainImageView(size_t index) override;
+  RHIDepthImageInfo getDepthImageInfo() override;
   RHICommandBuffer* getCurrentCommandBuffer() override;
   std::span<RHICommandBuffer> getCommandBuffers() override;
 

@@ -121,7 +121,7 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
                                    .attachments = &colorBlendAttachment,
                                    .blendConstants = {0.0f, 0.0f, 0.0f, 0.0f}};
 
-  auto attachmentDesciption = RHIAttachmentDescription{
+  auto colorAttachmentDesciption = RHIAttachmentDescription{
       .format = swapChainInfo.imageFormat,
       .samples = RHISampleCount::Count1,
       .loadOp = RHIAttachmentLoadOp::Clear,
@@ -131,18 +131,65 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .initialLayout = RHIImageLayout::Undefined,
       .finalLayout = RHIImageLayout::PresentSrcKHR,
   };
-  auto attachmentReference = RHIAttachmentReference{
+  auto colorAttachmentReference = RHIAttachmentReference{
       .attachment = 0, .layout = RHIImageLayout::ColorAttachmentOptimal};
+
+  auto depthImageInfo = rhi->getDepthImageInfo();
+  auto depthAttachmentDescription = RHIAttachmentDescription{
+      .format = depthImageInfo.format,
+      .samples = RHISampleCount::Count1,
+      .loadOp = RHIAttachmentLoadOp::Clear,
+      .storeOp = RHIAttachmentStoreOp::DontCare,
+      .stencilLoadOp = RHIAttachmentLoadOp::DontCare,
+      .stencilStoreOp = RHIAttachmentStoreOp::DontCare,
+      .initialLayout = RHIImageLayout::Undefined,
+      .finalLayout = RHIImageLayout::DepthStencilAttachmentOptimal,
+  };
+  auto depthAttachmentReference = RHIAttachmentReference{
+      .attachment = 1,
+      .layout = RHIImageLayout::DepthStencilAttachmentOptimal,
+  };
+
   auto subpassDescription = RHISubpassDescription{
       .pipelineBindPoint = RHIPipelineBindPoint::Graphics,
       .colorAttachmentCount = 1,
-      .colorAttachments = &attachmentReference,
+      .colorAttachments = &colorAttachmentReference,
+      .depthStencilAttachment = &depthAttachmentReference,
   };
+  auto subpassDependency = RHISubpassDependency{
+      .srcSubpass = RHISubpassExternal,
+      .dstSubpass = 0,
+      .srcStageMask = RHIPipelineStageFlag::ColorAttachmentOutput |
+                      RHIPipelineStageFlag::EarlyFragmentTests,
+      .dstStageMask = RHIPipelineStageFlag::ColorAttachmentOutput |
+                      RHIPipelineStageFlag::EarlyFragmentTests,
+      .srcAccessMask = RHIAccessFlag::None,
+      .dstAccessMask = RHIAccessFlag::ColorAttachmentWrite |
+                       RHIAccessFlag::DepthStencilAttachmentWrite,
+  };
+
+  std::array<RHIAttachmentDescription, 2> renderPassAttachments = {
+      colorAttachmentDesciption, depthAttachmentDescription};
+
   auto renderPassCreateInfo =
-      RHIRenderPassCreateInfo{.attachmentCount = 1,
-                              .attachments = &attachmentDesciption,
+      RHIRenderPassCreateInfo{.attachmentCount = renderPassAttachments.size(),
+                              .attachments = renderPassAttachments.data(),
                               .subpassCount = 1,
-                              .subpasses = &subpassDescription};
+                              .subpasses = &subpassDescription,
+                              .dependencyCount = 1,
+                              .dependencies = &subpassDependency};
+
+  auto depthStencilCreateInfo = RHIDepthStencilStateCreateInfo{
+    .depthTestEnable = RHITrue,
+    .depthWriteEnable = RHITrue,
+    .depthCompareOp = RHICompareOp::Less,
+    .depthBoundsTestEnable = RHIFalse,
+    .stencilTestEnable = RHIFalse,
+    .front = {},
+    .back = {},
+    .minDepthBounds = 0.0f,
+    .maxDepthBounds = 1.0f,
+  };
 
   auto uboLayoutBinding = RHIDescriptorSetLayoutBinding{
       .binding = 0,
@@ -186,11 +233,12 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
 
   framebuffers.reserve(swapChainInfo.imageViewsSize);
   for (auto i = 0U; i < swapChainInfo.imageViewsSize; i++) {
+    std::array<RHIImageView*, 2> attachments = {rhi->getSwapChainImageView(i),
+                                                depthImageInfo.imageView};
     auto framebufferCreateInfo = RHIFramebufferCreateInfo{
         .renderPass = renderPass.get(),
-        .attachmentCount = 1,
-        .attachments = swapChainInfo.imageViews,
-        .attachmentsOffset = i,
+        .attachmentCount = attachments.size(),
+        .attachments = attachments.data(),
         .width = swapChainInfo.extent.width,
         .height = swapChainInfo.extent.height,
         .layers = 1,
@@ -207,7 +255,7 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .viewportStateCreateInfo = &viewportStateCreateInfo,
       .rasterizationStateCreateInfo = &rasterizationStateCreateInfo,
       .multisampleStateCreateInfo = &multiSamplingCreateInfo,
-      .depthStencilStateCreateInfo = nullptr,
+      .depthStencilStateCreateInfo = &depthStencilCreateInfo,
       .colorBlendStateCreateInfo = &colorBlendStateCreateInfo,
       .pipelineLayout = piplineLayout.get(),
       .renderPass = renderPass.get(),
@@ -216,11 +264,17 @@ void RenderSystem::initialize(const RenderSystemInitInfo& initInfo) {
       .basePipelineIndex = -1,
   };
 
-  vertices = {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-              {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-              {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-              {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
-  indices = {0, 1, 2, 2, 3, 0};
+  vertices = {{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+              {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+              {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+              {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+
+              {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+              {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+              {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+              {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}};
+
+  indices = {0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4};
 
   auto [_vertexBuffer, _vertexBufferMemory] = createVertexBuffer(vertices);
   auto [_indexBuffer, _indexBufferMemory] = createIndexBuffer(indices);
@@ -502,7 +556,10 @@ void RenderSystem::recordCommandBuffer(RHICommandBuffer* commandBuffer) {
   auto imageIndex = rhi->getCurrentSwapChainImageIndex();
   rhi->beginCommandBuffer(commandBuffer, nullptr);
 
-  RHIClearValue clearValue = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+  std::array<RHIClearValue, 2> clearValues = {
+      RHIClearValue{.color = {{0.0f, 0.0f, 0.0f, 1.0f}}},
+      RHIClearValue{.depthStencil = {1.0f, 0}},
+  };
   auto renderPassBeginInfo =
       RHIRenderPassBeginInfo{.renderPass = renderPass.get(),
                              .frameBuffer = framebuffers[imageIndex].get(),
@@ -511,8 +568,8 @@ void RenderSystem::recordCommandBuffer(RHICommandBuffer* commandBuffer) {
                                      .offset = {0, 0},
                                      .extend = swapChainInfo.extent,
                                  },
-                             .clearValueCount = 1,
-                             .clearValue = &clearValue};
+                             .clearValueCount = clearValues.size(),
+                             .clearValue = clearValues.data()};
   rhi->cmdBeginRenderPass(commandBuffer, &renderPassBeginInfo,
                           RHISubpassContents::Inline);
   rhi->cmdBindPipeline(commandBuffer, RHIPipelineBindPoint::Graphics,

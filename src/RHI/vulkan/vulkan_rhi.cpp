@@ -303,12 +303,16 @@ void VulkanRHI::createSwapChainImageView() {
 
 std::unique_ptr<RHIFramebuffer> VulkanRHI::createFramebuffer(
     RHIFramebufferCreateInfo& createInfo) {
+  std::vector<vk::ImageView> attachments(createInfo.attachmentCount);
+  for(auto i = 0; i < createInfo.attachmentCount; i++) {
+    attachments[i] = GetResource<VulkanImageView>(createInfo.attachments[i]);
+  }
+
   auto frameBufferCreateInfo =
       vk::FramebufferCreateInfo()
           .setRenderPass(GetResource<VulkanRenderPass>(createInfo.renderPass))
-          .setAttachmentCount(createInfo.attachmentCount)
-          .setPAttachments(Cast<vk::ImageView>(createInfo.attachments) +
-                           createInfo.attachmentsOffset)
+          .setAttachmentCount(attachments.size())
+          .setPAttachments(attachments.data())
           .setWidth(createInfo.width)
           .setHeight(createInfo.height)
           .setLayers(createInfo.layers);
@@ -746,10 +750,8 @@ void VulkanRHI::updateDescriptorSets(
             .setDescriptorType(
                 Cast<vk::DescriptorType>(descriptorSet.descriptorType))
             .setPBufferInfo(bufferInfo ? &vkDescriptorBufferInfos[i] : nullptr)
-            .setPImageInfo(imageInfo ? &vkDescriptorImageInfos[i]
-                                     : nullptr)  // TODO
-            .setPTexelBufferView(nullptr)        // TODO
-        ;
+            .setPImageInfo(imageInfo ? &vkDescriptorImageInfos[i] : nullptr)
+            .setPTexelBufferView(nullptr);  // TODO
   }
   device.updateDescriptorSets(vkWriteDescriptorSets.size(),
                               vkWriteDescriptorSets.data(), 0, nullptr);
@@ -778,6 +780,18 @@ RHISwapChainInfo VulkanRHI::getSwapChainInfo() {
       .imageViews =
           reinterpret_cast<RHIImageView*>(swapChainImagesViews.data()),
       .imageViewsSize = swapChainImagesViews.size(),
+  };
+}
+
+RHIImageView * VulkanRHI::getSwapChainImageView(size_t index) {
+  return reinterpret_cast<RHIImageView*>(&swapChainImagesViews[index]);
+}
+
+RHIDepthImageInfo VulkanRHI::getDepthImageInfo() {
+  return RHIDepthImageInfo {
+    .format = Cast<RHIFormat>(depthImageFormat),
+    .image = reinterpret_cast<RHIImage*>(&depthImage),
+    .imageView = reinterpret_cast<RHIImageView*>(&depthImageView),
   };
 }
 

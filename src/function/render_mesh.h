@@ -12,7 +12,7 @@
 namespace Sparrow {
 
 struct Vertex {
-  glm::vec2 position;
+  glm::vec3 position;
   glm::vec3 color;
   glm::vec2 texCoord;
 
@@ -29,7 +29,7 @@ struct Vertex {
     descriptions[0] = RHIVertexAttributeDescription{
         .location = 0,
         .binding = 0,
-        .format = RHIFormat::R32G32Sfloat,
+        .format = RHIFormat::R32G32B32Sfloat,
         .offset = offsetof(Vertex, position),
     };
 

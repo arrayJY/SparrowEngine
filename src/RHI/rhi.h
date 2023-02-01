@@ -60,6 +60,8 @@ class RHI {
   virtual uint8_t getCurrentFrameIndex() = 0;
   virtual uint32_t getCurrentSwapChainImageIndex() = 0;
   virtual RHISwapChainInfo getSwapChainInfo() = 0;
+  virtual RHIImageView* getSwapChainImageView(size_t index) = 0;
+  virtual RHIDepthImageInfo getDepthImageInfo() = 0;
   virtual RHICommandBuffer* getCurrentCommandBuffer() = 0;
   virtual std::span<RHICommandBuffer> getCommandBuffers() = 0;
 
